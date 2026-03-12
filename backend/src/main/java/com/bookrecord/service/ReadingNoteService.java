@@ -172,6 +172,13 @@ public class ReadingNoteService {
                 .map(ReadingNoteResponse::fromEntity);
     }
 
+    @Transactional(readOnly = true)
+    public Page<ReadingNoteResponse> searchNotesWithFilters(String keyword, ReadingNote.NoteType noteType,
+                                                            String tag, String username, Pageable pageable) {
+        return readingNoteRepository.searchWithFilters(username, keyword, noteType, tag, pageable)
+                .map(ReadingNoteResponse::fromEntity);
+    }
+
     private ReadingNote findNoteByIdAndVerifyOwnership(Long id, String username) {
         ReadingNote note = readingNoteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("ReadingNote", "id", id));

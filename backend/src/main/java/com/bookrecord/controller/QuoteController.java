@@ -92,12 +92,21 @@ public class QuoteController {
     @GetMapping("/quotes/search")
     @Operation(summary = "搜索金句", description = "根据关键词搜索金句")
     public ResponseEntity<ApiResponse<Page<QuoteResponse>>> searchQuotes(
-            @Parameter(description = "搜索关键词") @RequestParam String keyword,
+            @Parameter(description = "搜索关键词") @RequestParam(required = false, defaultValue = "") String keyword,
+            @Parameter(description = "颜色") @RequestParam(required = false) String color,
+            @Parameter(description = "标签") @RequestParam(required = false) String tag,
             @Parameter(description = "页码") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每页大小") @RequestParam(defaultValue = "10") int size,
             @AuthenticationPrincipal UserDetails userDetails) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<QuoteResponse> quotes = quoteService.searchQuotes(keyword, userDetails.getUsername(), pageable);
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        Page<QuoteResponse> quotes;
+        if (color != null || tag != null) {
+            quotes = quoteService.searchQuotesWithFilters(keyword, color, tag, userDetails.getUsername(), pageable);
+        } else {
+            quotes = quoteService.searchQuotes(keyword, userDetails.getUsername(), pageable);
+        }
+
         return ResponseEntity.ok(ApiResponse.success(quotes));
     }
 

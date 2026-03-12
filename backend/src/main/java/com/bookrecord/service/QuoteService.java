@@ -132,6 +132,13 @@ public class QuoteService {
     }
 
     @Transactional(readOnly = true)
+    public Page<QuoteResponse> searchQuotesWithFilters(String keyword, String color, String tag,
+                                                        String username, Pageable pageable) {
+        return quoteRepository.searchWithFilters(username, keyword, color, tag, pageable)
+                .map(QuoteResponse::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
     public List<ReadingNoteResponse> getNotesForQuote(Long quoteId, String username) {
         Quote quote = findQuoteByIdAndVerifyOwnership(quoteId, username);
 

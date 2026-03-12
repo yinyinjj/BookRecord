@@ -24,6 +24,17 @@ public interface QuoteRepository extends JpaRepository<Quote, Long> {
            "LOWER(q.note) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Quote> searchByKeyword(@Param("username") String username, @Param("keyword") String keyword, Pageable pageable);
 
+    @Query("SELECT q FROM Quote q WHERE q.book.user.username = :username AND " +
+           "(:color IS NULL OR q.color = :color) AND " +
+           "(:tag IS NULL OR LOWER(q.tags) LIKE LOWER(CONCAT('%', :tag, '%'))) AND " +
+           "(LOWER(q.content) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(q.note) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<Quote> searchWithFilters(@Param("username") String username,
+                                   @Param("keyword") String keyword,
+                                   @Param("color") String color,
+                                   @Param("tag") String tag,
+                                   Pageable pageable);
+
     @Query("SELECT COUNT(q) FROM Quote q WHERE q.book.user.username = :username")
     Long countByUsername(@Param("username") String username);
 

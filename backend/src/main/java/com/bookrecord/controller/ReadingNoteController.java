@@ -103,12 +103,30 @@ public class ReadingNoteController {
     @GetMapping("/notes/search")
     @Operation(summary = "搜索感悟", description = "根据关键词搜索读书感悟")
     public ResponseEntity<ApiResponse<Page<ReadingNoteResponse>>> searchNotes(
-            @Parameter(description = "搜索关键词") @RequestParam String keyword,
+            @Parameter(description = "搜索关键词") @RequestParam(required = false, defaultValue = "") String keyword,
+            @Parameter(description = "感悟类型") @RequestParam(required = false) String noteType,
+            @Parameter(description = "标签") @RequestParam(required = false) String tag,
             @Parameter(description = "页码") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "每页大小") @RequestParam(defaultValue = "10") int size,
             @AuthenticationPrincipal UserDetails userDetails) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<ReadingNoteResponse> notes = readingNoteService.searchNotes(keyword, userDetails.getUsername(), pageable);
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        Page<ReadingNoteResponse> notes;
+        if (noteType != null || tag != null) {
+            com.bookrecord.entity.ReadingNote.NoteType typeEnum = null;
+            if (noteType != null && !noteType.isEmpty()) {
+                try {
+                    typeEnum = com.bookrecord.entity.ReadingNote.NoteType.valueOf(noteType);
+                } catch (IllegalArgumentException e) {
+                    return ResponseEntity.badRequest()
+                            .body(ApiResponse.error("Invalid note type: " + noteType));
+                }
+            }
+            notes = readingNoteService.searchNotesWithFilters(keyword, typeEnum, tag, userDetails.getUsername(), pageable);
+        } else {
+            notes = readingNoteService.searchNotes(keyword, userDetails.getUsername(), pageable);
+        }
+
         return ResponseEntity.ok(ApiResponse.success(notes));
     }
 }

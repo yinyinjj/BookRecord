@@ -23,6 +23,17 @@ public interface ReadingNoteRepository extends JpaRepository<ReadingNote, Long> 
            "LOWER(rn.content) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<ReadingNote> searchByKeyword(@Param("username") String username, @Param("keyword") String keyword, Pageable pageable);
 
+    @Query("SELECT rn FROM ReadingNote rn WHERE rn.book.user.username = :username AND " +
+           "(:noteType IS NULL OR rn.noteType = :noteType) AND " +
+           "(:tag IS NULL OR LOWER(rn.tags) LIKE LOWER(CONCAT('%', :tag, '%'))) AND " +
+           "(LOWER(rn.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
+           "LOWER(rn.content) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<ReadingNote> searchWithFilters(@Param("username") String username,
+                                        @Param("keyword") String keyword,
+                                        @Param("noteType") ReadingNote.NoteType noteType,
+                                        @Param("tag") String tag,
+                                        Pageable pageable);
+
     @Query("SELECT rn FROM ReadingNote rn WHERE rn.book.id = :bookId AND rn.noteType = :noteType")
     List<ReadingNote> findByBookIdAndNoteType(@Param("bookId") Long bookId, @Param("noteType") ReadingNote.NoteType noteType);
 

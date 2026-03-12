@@ -96,9 +96,14 @@ public class BookService {
         log.info("Deleting book id: {} for user: {}", id, username);
 
         Book book = findBookByIdAndUser(id, username);
+
+        // Log cascade delete information
+        log.info("Book has {} reading notes and {} quotes that will be cascade deleted",
+                book.getReadingNotes().size(), book.getQuotes().size());
+
         bookRepository.delete(book);
 
-        log.info("Book deleted successfully: {}", id);
+        log.info("Book and all associated data deleted successfully: {}", id);
     }
 
     @Transactional
