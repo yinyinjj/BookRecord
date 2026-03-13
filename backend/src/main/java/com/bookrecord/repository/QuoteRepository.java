@@ -109,23 +109,23 @@ public interface QuoteRepository extends JpaRepository<Quote, Long> {
 
     /**
      * 高级搜索金句
-     * 支持关键词、颜色、标签、时间范围等多条件组合查询
+     * 支持关键词、颜色、时间范围等多条件组合查询
+     * 注：标签筛选暂时不支持（tags字段为字符串，需要特殊处理）
      *
      * @param user 用户实体
      * @param keyword 搜索关键词（可为null）
      * @param colors 颜色列表（可为null或空）
-     * @param tags 标签列表（可为null或空）
      * @param startDate 开始时间（可为null）
      * @param endDate 结束时间（可为null）
      * @param pageable 分页参数
      * @return List<Quote> 符合条件的金句列表
      */
     @Query("SELECT DISTINCT q FROM Quote q WHERE q.book.user = :user " +
-           "AND (:keyword IS NULL OR " +
+           "AND (:keyword IS NULL OR :keyword = '' OR " +
            "     LOWER(q.content) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
            "     LOWER(q.note) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
            "     LOWER(q.tags) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-           "AND (:colors IS NULL OR SIZE(:colors) = 0 OR q.color IN (:colors)) " +
+           "AND (:colors IS NULL OR q.color IN :colors) " +
            "AND (:startDate IS NULL OR q.createdAt >= :startDate) " +
            "AND (:endDate IS NULL OR q.createdAt <= :endDate) " +
            "ORDER BY q.createdAt DESC")
@@ -133,7 +133,6 @@ public interface QuoteRepository extends JpaRepository<Quote, Long> {
             @Param("user") User user,
             @Param("keyword") String keyword,
             @Param("colors") List<String> colors,
-            @Param("tags") List<String> tags,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             Pageable pageable

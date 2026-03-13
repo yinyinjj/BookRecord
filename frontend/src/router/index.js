@@ -15,6 +15,12 @@ const routes = [
     meta: { requiresAuth: false }
   },
   {
+    path: '/share/:token',
+    name: 'Share',
+    component: () => import('@/views/Share.vue'),
+    meta: { requiresAuth: false, isPublic: true }
+  },
+  {
     path: '/',
     name: 'Layout',
     component: () => import('@/components/Layout.vue'),

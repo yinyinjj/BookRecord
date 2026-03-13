@@ -176,8 +176,11 @@ public class SearchService {
      */
     private List<SearchResult.BookResult> searchBooksWithFilters(User user, String keyword,
             AdvancedSearchRequest request, Pageable pageable) {
-        // 获取筛选参数
+        // 获取筛选参数，空列表转为null以便JPQL查询正确处理
         List<String> statuses = request.getReadingStatuses();
+        if (statuses != null && statuses.isEmpty()) {
+            statuses = null;
+        }
         LocalDateTime startDate = request.getStartDate();
         LocalDateTime endDate = request.getEndDate();
 
@@ -209,9 +212,12 @@ public class SearchService {
      */
     private List<SearchResult.NoteResult> searchNotesWithFilters(User user, String keyword,
             AdvancedSearchRequest request, Pageable pageable) {
-        // 获取筛选参数
+        // 获取筛选参数，空列表转为null以便JPQL查询正确处理
         List<String> noteTypes = request.getNoteTypes();
-        List<String> tags = request.getTags();
+        if (noteTypes != null && noteTypes.isEmpty()) {
+            noteTypes = null;
+        }
+        // 注：tags筛选暂时不支持
         LocalDateTime startDate = request.getStartDate();
         LocalDateTime endDate = request.getEndDate();
 
@@ -220,7 +226,6 @@ public class SearchService {
                 user,
                 keyword.isEmpty() ? null : keyword,
                 noteTypes,
-                tags,
                 startDate,
                 endDate,
                 pageable
@@ -244,9 +249,12 @@ public class SearchService {
      */
     private List<SearchResult.QuoteResult> searchQuotesWithFilters(User user, String keyword,
             AdvancedSearchRequest request, Pageable pageable) {
-        // 获取筛选参数
+        // 获取筛选参数，空列表转为null以便JPQL查询正确处理
         List<String> colors = request.getColors();
-        List<String> tags = request.getTags();
+        if (colors != null && colors.isEmpty()) {
+            colors = null;
+        }
+        // 注：tags筛选暂时不支持
         LocalDateTime startDate = request.getStartDate();
         LocalDateTime endDate = request.getEndDate();
 
@@ -255,7 +263,6 @@ public class SearchService {
                 user,
                 keyword.isEmpty() ? null : keyword,
                 colors,
-                tags,
                 startDate,
                 endDate,
                 pageable

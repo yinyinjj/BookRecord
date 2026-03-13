@@ -87,12 +87,12 @@ public interface BookRepository extends JpaRepository<Book, Long> {
      * @return List<Book> 符合条件的书籍列表
      */
     @Query("SELECT DISTINCT b FROM Book b WHERE b.user = :user " +
-           "AND (:keyword IS NULL OR " +
+           "AND (:keyword IS NULL OR :keyword = '' OR " +
            "     LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
            "     LOWER(b.author) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
            "     LOWER(b.isbn) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-           "AND (:statuses IS NULL OR SIZE(:statuses) = 0 OR " +
-           "     CAST(b.readingStatus AS string) IN (:statuses)) " +
+           "AND (:statuses IS NULL OR " +
+           "     CAST(b.readingStatus AS string) IN :statuses) " +
            "AND (:startDate IS NULL OR b.createdAt >= :startDate) " +
            "AND (:endDate IS NULL OR b.createdAt <= :endDate) " +
            "ORDER BY b.createdAt DESC")

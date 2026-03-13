@@ -109,25 +109,24 @@ public interface ReadingNoteRepository extends JpaRepository<ReadingNote, Long> 
 
     /**
      * 高级搜索感悟
-     * 支持关键词、感悟类型、标签、时间范围等多条件组合查询
-     * 标签匹配逻辑：只要感悟的tags字段包含任一传入的标签即匹配
+     * 支持关键词、感悟类型、时间范围等多条件组合查询
+     * 注：标签筛选暂时不支持（tags字段为字符串，需要特殊处理）
      *
      * @param user 用户实体
      * @param keyword 搜索关键词（可为null）
      * @param noteTypes 感悟类型列表（可为null或空）
-     * @param tags 标签列表（可为null或空）
      * @param startDate 开始时间（可为null）
      * @param endDate 结束时间（可为null）
      * @param pageable 分页参数
      * @return List<ReadingNote> 符合条件的感悟列表
      */
     @Query("SELECT DISTINCT rn FROM ReadingNote rn WHERE rn.book.user = :user " +
-           "AND (:keyword IS NULL OR " +
+           "AND (:keyword IS NULL OR :keyword = '' OR " +
            "     LOWER(rn.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
            "     LOWER(rn.content) LIKE LOWER(CONCAT('%', :keyword, '%')) OR " +
            "     LOWER(rn.tags) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-           "AND (:noteTypes IS NULL OR SIZE(:noteTypes) = 0 OR " +
-           "     CAST(rn.noteType AS string) IN (:noteTypes)) " +
+           "AND (:noteTypes IS NULL OR " +
+           "     CAST(rn.noteType AS string) IN :noteTypes) " +
            "AND (:startDate IS NULL OR rn.createdAt >= :startDate) " +
            "AND (:endDate IS NULL OR rn.createdAt <= :endDate) " +
            "ORDER BY rn.createdAt DESC")
@@ -135,7 +134,6 @@ public interface ReadingNoteRepository extends JpaRepository<ReadingNote, Long> 
             @Param("user") User user,
             @Param("keyword") String keyword,
             @Param("noteTypes") List<String> noteTypes,
-            @Param("tags") List<String> tags,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
             Pageable pageable

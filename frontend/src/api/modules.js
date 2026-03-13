@@ -163,3 +163,40 @@ export const searchApi = {
     return api.post('/v1/search/advanced', params)
   }
 }
+
+/**
+ * 分享 API 模块
+ * 提供感悟和金句的分享功能
+ */
+export const shareApi = {
+  /**
+   * 创建感悟分享链接
+   * @param {number} noteId - 感悟ID
+   * @param {Object} data - 分享设置
+   * @param {number} data.expiryDays - 有效期天数（0=永久，1=1天，7=7天）
+   * @returns {Promise} 分享响应（包含token和shareUrl）
+   */
+  shareNote(noteId, data = {}) {
+    return api.post(`/v1/notes/${noteId}/share`, data)
+  },
+
+  /**
+   * 创建金句分享链接
+   * @param {number} quoteId - 金句ID
+   * @param {Object} data - 分享设置
+   * @param {number} data.expiryDays - 有效期天数（0=永久，1=1天，7=7天）
+   * @returns {Promise} 分享响应（包含token和shareUrl）
+   */
+  shareQuote(quoteId, data = {}) {
+    return api.post(`/v1/quotes/${quoteId}/share`, data)
+  },
+
+  /**
+   * 获取分享内容（公开访问，无需认证）
+   * @param {string} token - 分享令牌
+   * @returns {Promise} 分享内容
+   */
+  getSharedContent(token) {
+    return api.get(`/public/share/${token}`)
+  }
+}

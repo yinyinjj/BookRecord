@@ -28,3 +28,8 @@ springdoc:
 jwt:
   secret: ${JWT_SECRET:bookrecord-default-secret-key-for-development-only-please-change-in-production}
   expiration: 86400000 # 24 hours in milliseconds
+
+# 应用自定义配置
+app:
+  frontend:
+    url: ${FRONTEND_URL:http://localhost:5173}  # 前端基础URL，用于生成分享链接
