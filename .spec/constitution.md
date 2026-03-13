@@ -11,6 +11,189 @@
 - **后端技术**: Spring Boot 3.2.5 + Spring Data JPA + Spring Security + JWT
 - **前端技术**: Vue 3 (Composition API) + Element Plus + Pinia + Axios
 
+### ⚠️ 代码注释规范（强制要求）
+
+**所有代码必须使用中文详细注释，这是项目的强制性规范。**
+
+#### 注释原则
+1. **类级别注释**：每个类必须有中文注释说明其用途和职责
+2. **方法级别注释**：所有 public 方法必须有注释说明功能、参数、返回值
+3. **复杂逻辑注释**：复杂的业务逻辑、算法必须有行内注释解释
+4. **配置注释**：配置文件、常量定义必须有注释说明用途
+
+#### 注释格式示例
+
+**Java 后端注释**：
+```java
+/**
+ * 书籍服务类
+ * 负责书籍相关的业务逻辑处理，包括CRUD操作、阅读状态管理等
+ *
+ * @author Book Record Team
+ * @since 1.0.0
+ */
+@Service
+@Slf4j
+public class BookService {
+
+    /**
+     * 创建新书籍
+     * 验证书籍信息并保存到数据库，自动关联当前用户
+     *
+     * @param request 书籍创建请求DTO，包含书名、作者等信息
+     * @param username 当前登录用户名
+     * @return BookResponse 创建成功的书籍响应DTO
+     * @throws BadRequestException 当书籍信息验证失败时抛出
+     */
+    @Transactional
+    public BookResponse createBook(BookRequest request, String username) {
+        // 记录创建日志，包含书名和用户信息
+        log.info("创建书籍: {} for user: {}", request.getTitle(), username);
+
+        // 获取当前用户实体
+        User user = userRepository.findByUsername(username)
+            .orElseThrow(() -> new ResourceNotFoundException("User", "username", username));
+
+        // 构建书籍实体并设置初始状态
+        Book book = Book.builder()
+            .title(request.getTitle())
+            .author(request.getAuthor())
+            .user(user)
+            .readingStatus(ReadingStatus.WANT_TO_READ)  // 默认状态为"想读"
+            .build();
+
+        // 保存书籍到数据库
+        book = bookRepository.save(book);
+
+        log.info("书籍创建成功，ID: {}", book.getId());
+        return BookResponse.fromEntity(book);
+    }
+}
+```
+
+**Vue 前端注释**：
+```vue
+<script setup>
+/**
+ * 书架页面组件
+ * 展示用户的所有书籍，支持按状态筛选、搜索和排序
+ */
+import { ref, reactive, onMounted, computed } from 'vue'
+
+// ==================== 响应式状态定义 ====================
+
+/** 书籍列表数据 */
+const books = ref([])
+
+/** 加载状态 */
+const loading = ref(false)
+
+/** 当前选中的阅读状态筛选 */
+const currentStatus = ref('')
+
+/** 搜索关键词 */
+const searchKeyword = ref('')
+
+/**
+ * 表单数据（用于添加/编辑书籍对话框）
+ */
+const form = reactive({
+  title: '',      // 书名
+  author: '',     // 作者
+  totalPages: null, // 总页数
+  currentPage: null // 当前页码
+})
+
+// ==================== 表单验证规则 ====================
+
+/**
+ * 表单验证规则定义
+ * required: 必填字段
+ * max: 最大长度限制
+ */
+const rules = {
+  title: [
+    { required: true, message: '请输入书名', trigger: 'blur' },
+    { max: 100, message: '书名长度不能超过100', trigger: 'blur' }
+  ],
+  author: [
+    { required: true, message: '请输入作者', trigger: 'blur' }
+  ]
+}
+
+// ==================== 生命周期钩子 ====================
+
+/**
+ * 组件挂载时加载书籍列表
+ */
+onMounted(() => {
+  loadBooks()
+})
+
+// ==================== 方法定义 ====================
+
+/**
+ * 加载书籍列表
+ * 根据当前筛选条件和搜索关键词获取书籍数据
+ */
+async function loadBooks() {
+  loading.value = true
+  try {
+    const params = {
+      status: currentStatus.value,  // 阅读状态筛选
+      keyword: searchKeyword.value   // 搜索关键词
+    }
+    const response = await bookApi.getBooks(params)
+    books.value = response.data
+  } catch (error) {
+    // 错误已在Axios拦截器中统一处理
+    console.error('加载书籍列表失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+/**
+ * 删除书籍
+ * 删除前显示确认对话框，成功后从列表中移除
+ *
+ * @param {number} bookId - 要删除的书籍ID
+ */
+async function handleDelete(bookId) {
+  try {
+    await ElMessageBox.confirm('确定要删除这本书吗？此操作不可恢复', '删除确认', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    // 调用删除API
+    await bookApi.deleteBook(bookId)
+
+    // 从列表中移除已删除的书籍
+    books.value = books.value.filter(book => book.id !== bookId)
+
+    ElMessage.success('删除成功')
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除书籍失败:', error)
+    }
+  }
+}
+</script>
+```
+
+#### 注释检查清单
+
+开发完成后，必须检查以下项目：
+
+- [ ] 所有类都有中文类级别注释
+- [ ] 所有 public 方法都有注释说明功能和参数
+- [ ] 复杂的业务逻辑有行内注释解释
+- [ ] 配置项和常量有注释说明用途
+- [ ] 注释准确反映代码功能，与代码同步更新
+- [ ] 注释简洁明了，避免冗余
+
 ---
 
 ## 2. 后端代码规范
