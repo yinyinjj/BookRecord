@@ -127,3 +127,39 @@ export const quoteApi = {
     return api.get(`/v1/quotes/${quoteId}/notes`)
   }
 }
+
+/**
+ * 搜索 API 模块
+ * 提供全局搜索和高级搜索功能
+ */
+export const searchApi = {
+  /**
+   * 基础全局搜索
+   * @param {string} keyword - 搜索关键词
+   * @returns {Promise} 搜索结果
+   */
+  search(keyword) {
+    return api.get('/v1/search', { params: { keyword } })
+  },
+
+  /**
+   * 高级搜索
+   * 支持多条件组合查询
+   * @param {Object} params - 搜索参数
+   * @param {string} params.keyword - 搜索关键词
+   * @param {string} params.type - 搜索类型 (all/books/notes/quotes)
+   * @param {string} params.startDate - 开始时间
+   * @param {string} params.endDate - 结束时间
+   * @param {Array<string>} params.readingStatuses - 阅读状态列表
+   * @param {Array<string>} params.noteTypes - 感悟类型列表
+   * @param {Array<string>} params.tags - 标签列表
+   * @param {Array<string>} params.colors - 金句颜色列表
+   * @param {string} params.combineMode - 条件组合方式 (AND/OR)
+   * @param {number} params.page - 页码
+   * @param {number} params.size - 每页数量
+   * @returns {Promise} 搜索结果
+   */
+  advancedSearch(params) {
+    return api.post('/v1/search/advanced', params)
+  }
+}

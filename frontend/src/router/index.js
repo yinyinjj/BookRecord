@@ -44,6 +44,11 @@ const routes = [
         path: 'quotes',
         name: 'Quotes',
         component: () => import('@/views/Quotes.vue')
+      },
+      {
+        path: 'search',
+        name: 'Search',
+        component: () => import('@/views/Search.vue')
       }
     ]
   }

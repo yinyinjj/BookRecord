@@ -14,7 +14,12 @@
           <el-menu-item index="/notes">读书感悟</el-menu-item>
           <el-menu-item index="/quotes">金句收藏</el-menu-item>
         </el-menu>
-        <div class="user-info">
+        <div class="header-actions">
+          <router-link to="/search" class="search-link">
+            <el-icon><Search /></el-icon>
+            <span>搜索</span>
+          </router-link>
+          <div class="user-info">
           <el-dropdown @command="handleCommand">
             <span class="el-dropdown-link">
               <el-icon><User /></el-icon>
@@ -28,6 +33,7 @@
               </el-dropdown-menu>
             </template>
           </el-dropdown>
+        </div>
         </div>
       </div>
     </el-header>
@@ -43,6 +49,7 @@ import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { ElMessage } from 'element-plus'
+import { Search } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -93,6 +100,30 @@ function handleCommand(command) {
   flex: 1;
   margin: 0 40px;
   border-bottom: none;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.search-link {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  background: #ecf5ff;
+  border-radius: 20px;
+  color: #409eff;
+  text-decoration: none;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.search-link:hover {
+  background: #409eff;
+  color: white;
 }
 
 .user-info {
