@@ -18,6 +18,7 @@ public class QuoteResponse {
     private Long id;
     private Long bookId;
     private String bookTitle;
+    private String bookAuthor;  // 书籍作者
     private String content;
     private String chapter;
     private Integer pageNumber;
@@ -33,6 +34,7 @@ public class QuoteResponse {
                 .id(quote.getId())
                 .bookId(quote.getBook().getId())
                 .bookTitle(quote.getBook().getTitle())
+                .bookAuthor(quote.getBook().getAuthor())  // 添加书籍作者
                 .content(quote.getContent())
                 .chapter(quote.getChapter())
                 .pageNumber(quote.getPageNumber())

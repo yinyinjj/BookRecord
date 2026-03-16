@@ -53,22 +53,37 @@
     <!-- 底部按钮 -->
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="handleClose">取消</el-button>
+        <!-- 金句类型显示生成卡片按钮 -->
         <el-button
-          type="primary"
-          @click="handleGenerateLink"
-          :loading="generating"
-          v-if="!shareUrl"
+          v-if="resourceType === 'quote'"
+          @click="handleOpenCard"
+          class="card-btn"
         >
-          生成分享链接
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          生成分享卡片
         </el-button>
-        <el-button
-          type="primary"
-          @click="copyToClipboard"
-          v-else
-        >
-          复制链接
-        </el-button>
+        <div class="footer-right">
+          <el-button @click="handleClose">取消</el-button>
+          <el-button
+            type="primary"
+            @click="handleGenerateLink"
+            :loading="generating"
+            v-if="!shareUrl"
+          >
+            生成分享链接
+          </el-button>
+          <el-button
+            type="primary"
+            @click="copyToClipboard"
+            v-else
+          >
+            复制链接
+          </el-button>
+        </div>
       </div>
     </template>
   </el-dialog>
@@ -103,12 +118,23 @@ const props = defineProps({
   resourceId: {
     type: Number,
     required: true
+  },
+  /** 金句数据（用于生成分享卡片，仅quote类型需要） */
+  quoteData: {
+    type: Object,
+    default: () => ({
+      content: '',
+      bookTitle: '',
+      bookAuthor: '',
+      chapter: '',
+      pageNumber: null
+    })
   }
 })
 
 // ==================== Emits 定义 ====================
 
-const emit = defineEmits(['update:modelValue', 'shared'])
+const emit = defineEmits(['update:modelValue', 'shared', 'open-card'])
 
 // ==================== 响应式状态 ====================
 
@@ -216,6 +242,20 @@ function handleClose() {
   expiryDays.value = 0
 }
 
+/**
+ * 打开分享卡片生成器
+ * 仅金句类型可用
+ */
+function handleOpenCard() {
+  // 触发事件，让父组件打开卡片生成器
+  emit('open-card', {
+    resourceId: props.resourceId,
+    quoteData: props.quoteData
+  })
+  // 关闭当前对话框
+  handleClose()
+}
+
 // ==================== 侦听器 ====================
 
 /** 对话框打开时重置状态 */
@@ -306,8 +346,28 @@ watch(visible, (val) => {
 /* 底部按钮 */
 .dialog-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   gap: 12px;
+}
+
+.footer-right {
+  display: flex;
+  gap: 12px;
+}
+
+.card-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #8b6f47;
+  border-color: #8b6f47;
+}
+
+.card-btn:hover {
+  color: #6b5344;
+  border-color: #6b5344;
+  background: #faf8f5;
 }
 
 /* ==================== 响应式 ==================== */

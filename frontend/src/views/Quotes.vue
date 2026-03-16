@@ -275,6 +275,16 @@
       v-model="shareDialogVisible"
       resource-type="quote"
       :resource-id="shareQuoteId"
+      :quote-data="shareQuoteData"
+      @open-card="handleOpenCard"
+    />
+
+    <!-- 金句分享卡片生成器 -->
+    <QuoteShareCard
+      v-model="showShareCard"
+      :quote="shareQuoteData"
+      @download-success="handleDownloadSuccess"
+      @copy-success="handleCopySuccess"
     />
   </div>
 </template>
@@ -284,6 +294,7 @@ import { ref, computed, onMounted } from 'vue'
 import { quoteApi } from '@/api/modules'
 import { ElMessage, ElNotification } from 'element-plus'
 import ShareDialog from '@/components/ShareDialog.vue'
+import QuoteShareCard from '@/components/QuoteShareCard.vue'
 
 const loading = ref(false)
 const quotes = ref([])
@@ -333,6 +344,16 @@ const deleteTimers = ref(new Map())
 // Share dialog
 const shareDialogVisible = ref(false)
 const shareQuoteId = ref(null)
+
+// 分享卡片生成器
+const showShareCard = ref(false)
+const shareQuoteData = ref({
+  content: '',
+  bookTitle: '',
+  author: '',
+  chapter: '',
+  pageNumber: null
+})
 
 onMounted(() => {
   loadQuotes()
@@ -557,8 +578,41 @@ async function performDelete(quoteId) {
 
 // Share quote
 function handleShare(quote) {
+  // 设置分享数据
   shareQuoteId.value = quote.id
+  shareQuoteData.value = {
+    content: quote.content || '',
+    bookTitle: quote.bookTitle || '',
+    bookAuthor: quote.bookAuthor || '',
+    chapter: quote.chapter || '',
+    pageNumber: quote.pageNumber || null
+  }
+  // 打开分享对话框（生成链接）
   shareDialogVisible.value = true
+}
+
+/**
+ * 打开分享卡片生成器
+ * 从ShareDialog点击"生成分享卡片"触发
+ */
+function handleOpenCard(data) {
+  shareQuoteId.value = data.resourceId
+  shareQuoteData.value = data.quoteData
+  showShareCard.value = true
+}
+
+/**
+ * 分享卡片下载成功回调
+ */
+function handleDownloadSuccess() {
+  ElMessage.success('图片下载成功，快去分享吧！')
+}
+
+/**
+ * 分享卡片复制成功回调
+ */
+function handleCopySuccess() {
+  ElMessage.success('金句已复制，快去分享吧！')
 }
 </script>
 
