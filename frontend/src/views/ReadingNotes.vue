@@ -90,9 +90,8 @@
           <div
             :class="['note-content', { 'is-expanded': expandedNotes.includes(note.id) }]"
             :ref="el => setContentRef(note.id, el)"
-          >
-            {{ note.content }}
-          </div>
+            v-html="getNoteContent(note.content)"
+          ></div>
 
           <button
             v-if="shouldShowExpandButton(note.id, note.content)"
@@ -222,12 +221,11 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="内容" prop="content">
-          <el-input
+        <el-form-item label="内容" prop="content" class="editor-form-item">
+          <BlockEditor
+            ref="editEditorRef"
             v-model="editForm.content"
-            type="textarea"
-            :rows="6"
-            placeholder="请输入感悟内容"
+            placeholder="在这里记录你的阅读感悟..."
           />
         </el-form-item>
 
@@ -272,6 +270,8 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { readingNoteApi } from '@/api/modules'
 import { ElMessage, ElNotification } from 'element-plus'
 import ShareDialog from '@/components/ShareDialog.vue'
+// 导入块级富文本编辑器组件
+import BlockEditor from '@/components/BlockEditor.vue'
 
 const loading = ref(false)
 const notes = ref([])
@@ -291,6 +291,7 @@ const contentRefs = ref({})
 const editDialogVisible = ref(false)
 const editFormRef = ref(null)
 const editLoading = ref(false)
+const editEditorRef = ref(null)  // 富文本编辑器组件引用
 const editForm = ref({
   id: null,
   title: '',
@@ -402,6 +403,36 @@ function parseTags(tags) {
   return tags.split(',').map(tag => tag.trim()).filter(tag => tag)
 }
 
+/**
+ * HTML 反转义函数
+ * 将转义后的 HTML 实体（如 &lt; &gt; &amp; 等）还原为原始字符
+ * 用于处理数据库中可能被转义存储的富文本内容
+ * @param {string} html - 可能被转义的 HTML 内容
+ * @returns {string} 反转义后的 HTML 内容
+ */
+function unescapeHtml(html) {
+  if (!html) return ''
+  // 创建临时 textarea 元素，利用浏览器的内置解码能力
+  const textarea = document.createElement('textarea')
+  textarea.innerHTML = html
+  return textarea.value
+}
+
+/**
+ * 获取感悟内容
+ * 对可能被转义的 HTML 内容进行反转义处理
+ * @param {string} content - 感悟内容
+ * @returns {string} 处理后的 HTML 内容
+ */
+function getNoteContent(content) {
+  if (!content) return ''
+  // 检测内容是否被转义（包含 &lt; 或 &gt; 等实体）
+  if (content.includes('&lt;') || content.includes('&gt;') || content.includes('&amp;')) {
+    return unescapeHtml(content)
+  }
+  return content
+}
+
 function getNoteTypeText(type) {
   const texts = {
     THOUGHT: '感悟',
@@ -462,10 +493,22 @@ function handleEdit(note) {
     isPrivate: note.isPrivate || false
   }
   editDialogVisible.value = true
+
+  // 等待 DOM 更新后设置编辑器内容
+  nextTick(() => {
+    if (editEditorRef.value && note.content) {
+      editEditorRef.value.setContent(note.content)
+    }
+  })
 }
 
 async function submitEdit() {
   if (!editFormRef.value) return
+
+  // 从富文本编辑器获取 HTML 内容
+  if (editEditorRef.value) {
+    editForm.value.content = editEditorRef.value.getHTML()
+  }
 
   await editFormRef.value.validate(async (valid) => {
     if (valid) {
@@ -834,6 +877,110 @@ function handleShare(note) {
   right: 0;
   height: 2rem;
   background: linear-gradient(to bottom, transparent, white);
+}
+
+/* 富文本内容渲染样式 */
+.note-content :deep(h1) {
+  font-size: 1.6em;
+  font-weight: 700;
+  margin: 0.8em 0 0.4em;
+  color: #2c1810;
+}
+
+.note-content :deep(h2) {
+  font-size: 1.4em;
+  font-weight: 600;
+  margin: 0.7em 0 0.3em;
+  color: #3d3629;
+}
+
+.note-content :deep(h3) {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin: 0.6em 0 0.3em;
+  color: #3d3629;
+}
+
+.note-content :deep(p) {
+  margin: 0.5em 0;
+}
+
+.note-content :deep(blockquote) {
+  margin: 1em 0;
+  padding: 0.8em 1.2em;
+  border-left: 4px solid #c9a96e;
+  background: #fdfbf7;
+  color: #5d4e37;
+  border-radius: 0 4px 4px 0;
+  font-style: italic;
+}
+
+.note-content :deep(pre) {
+  background: #f5f0e6;
+  padding: 1em;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 1em 0;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.note-content :deep(code) {
+  background: #f5f0e6;
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 0.9em;
+  color: #8b4513;
+}
+
+.note-content :deep(ul),
+.note-content :deep(ol) {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.note-content :deep(li) {
+  margin: 0.3em 0;
+}
+
+.note-content :deep(mark) {
+  background: #fff3cd;
+  padding: 0 2px;
+}
+
+.note-content :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+
+.note-content :deep(th),
+.note-content :deep(td) {
+  border: 1px solid #e8ddd0;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.note-content :deep(th) {
+  background: #f5f0e6;
+  font-weight: 600;
+}
+
+.note-content :deep(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 0.5em 0;
+}
+
+/* 编辑器表单项样式 */
+.editor-form-item {
+  margin-bottom: 20px;
+}
+
+.editor-form-item :deep(.el-form-item__content) {
+  line-height: 1;
 }
 
 .expand-btn {
