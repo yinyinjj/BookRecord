@@ -27,13 +27,23 @@
         <h1 class="page-title">我的书架</h1>
         <p class="page-subtitle">珍藏每一本值得铭记的书</p>
       </div>
-      <button class="add-book-btn" @click="showAddDialog">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="12" y1="5" x2="12" y2="19"></line>
-          <line x1="5" y1="12" x2="19" y2="12"></line>
-        </svg>
-        <span>添加书籍</span>
-      </button>
+      <div class="header-actions">
+        <button class="import-btn" @click="importDialogVisible = true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <span>导入书单</span>
+        </button>
+        <button class="add-book-btn" @click="showAddDialog">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>添加书籍</span>
+        </button>
+      </div>
     </header>
 
     <!-- Search & Filter Bar -->
@@ -140,87 +150,78 @@
     </div>
 
     <!-- Add/Edit Dialog -->
-    <el-dialog
-      v-model="dialogVisible"
-      :title="isEdit ? '编辑书籍' : '添加新书'"
-      width="600px"
-      custom-class="book-dialog"
-    >
-      <el-form ref="bookFormRef" :model="bookForm" :rules="bookRules" label-width="100px">
-        <el-form-item label="书名" prop="title">
-          <el-input v-model="bookForm.title" placeholder="请输入书名" />
-        </el-form-item>
+    <BookAutoFillDialog
+      v-model:visible="dialogVisible"
+      :edit-mode="isEdit"
+      :book-data="editBookData"
+      @submit="handleFormSubmit"
+    />
 
-        <el-form-item label="作者" prop="author">
-          <el-input v-model="bookForm.author" placeholder="请输入作者" />
-        </el-form-item>
-
-        <el-form-item label="阅读状态" prop="readingStatus">
-          <el-select v-model="bookForm.readingStatus" placeholder="请选择阅读状态">
-            <el-option label="想读" value="WANT_TO_READ" />
-            <el-option label="在读" value="READING" />
-            <el-option label="已完成" value="COMPLETED" />
-            <el-option label="已放弃" value="ABANDONED" />
-          </el-select>
-        </el-form-item>
-
-        <el-form-item label="总页数">
-          <el-input-number v-model="bookForm.pageCount" :min="0" />
-        </el-form-item>
-
-        <el-form-item label="当前页码">
-          <el-input-number v-model="bookForm.currentPage" :min="0" />
-        </el-form-item>
-
-        <el-form-item label="ISBN">
-          <el-input v-model="bookForm.isbn" placeholder="请输入ISBN" />
-        </el-form-item>
-
-        <el-form-item label="出版社">
-          <el-input v-model="bookForm.publisher" placeholder="请输入出版社" />
-        </el-form-item>
-
-        <el-form-item label="评分">
-          <el-rate v-model="bookForm.rating" :max="5" />
-        </el-form-item>
-
-        <el-form-item label="简介">
-          <el-input v-model="bookForm.description" type="textarea" :rows="3" />
-        </el-form-item>
-      </el-form>
-
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitLoading" @click="handleSubmit">
-          确定
-        </el-button>
-      </template>
-    </el-dialog>
+    <!-- Import Dialog -->
+    <BookImportDialog
+      v-model:visible="importDialogVisible"
+      @complete="handleImportComplete"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount, computed } from 'vue'
+/**
+ * 书架页面组件
+ * 展示用户的所有书籍，支持按状态筛选、搜索和排序
+ * 集成书籍自动识别功能（ISBN识别和书名搜索）
+ */
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { bookApi } from '@/api/modules'
 import { ElMessage } from 'element-plus'
+// 导入书籍自动识别对话框组件
+import BookAutoFillDialog from '@/components/BookAutoFillDialog.vue'
+// 导入书单导入对话框组件
+import BookImportDialog from '@/components/BookImportDialog.vue'
 
 const router = useRouter()
 
+// ==================== 响应式状态定义 ====================
+
+/** 加载状态 */
 const loading = ref(false)
-const submitLoading = ref(false)
+
+/** 书籍列表数据 */
 const books = ref([])
+
+/** 总数 */
 const total = ref(0)
+
+/** 当前页码 */
 const currentPage = ref(1)
+
+/** 每页大小 */
 const pageSize = ref(12)
+
+/** 总页数 */
 const totalPages = computed(() => Math.ceil(total.value / pageSize.value))
+
+/** 搜索关键词 */
 const searchKeyword = ref('')
+
+/** 状态筛选 */
 const filterStatus = ref('')
 
+/** 对话框显示状态 */
 const dialogVisible = ref(false)
+
+/** 是否为编辑模式 */
 const isEdit = ref(false)
+
+/** 编辑时的书籍ID */
 const editId = ref(null)
-const bookFormRef = ref(null)
+
+/** 编辑时的书籍数据（传递给对话框组件） */
+const editBookData = ref({})
+
+/** 导入对话框显示状态 */
+const importDialogVisible = ref(false)
 
 // Undo notification state
 const undoNotification = ref({
@@ -232,22 +233,7 @@ const undoNotification = ref({
   timer: null
 })
 
-const bookForm = reactive({
-  title: '',
-  author: '',
-  readingStatus: 'WANT_TO_READ',
-  pageCount: null,
-  currentPage: 0,
-  isbn: '',
-  publisher: '',
-  rating: null,
-  description: ''
-})
-
-const bookRules = {
-  title: [{ required: true, message: '请输入书名', trigger: 'blur' }],
-  readingStatus: [{ required: true, message: '请选择阅读状态', trigger: 'change' }]
-}
+// ==================== 生命周期钩子 ====================
 
 onMounted(() => {
   loadBooks()
@@ -322,44 +308,65 @@ async function handleFilter() {
   }
 }
 
+// ==================== 方法定义 ====================
+
+/**
+ * 显示添加书籍对话框
+ */
 function showAddDialog() {
   isEdit.value = false
   editId.value = null
-  resetForm()
+  editBookData.value = {}
   dialogVisible.value = true
 }
 
+/**
+ * 编辑书籍
+ * 设置编辑模式并传递书籍数据给对话框组件
+ *
+ * @param {Object} book - 要编辑的书籍对象
+ */
 function editBook(book) {
   isEdit.value = true
   editId.value = book.id
-  Object.assign(bookForm, book)
+  editBookData.value = { ...book }
   dialogVisible.value = true
 }
 
-async function handleSubmit() {
-  if (!bookFormRef.value) return
-
-  await bookFormRef.value.validate(async (valid) => {
-    if (valid) {
-      submitLoading.value = true
-      try {
-        if (isEdit.value) {
-          await bookApi.updateBook(editId.value, bookForm)
-          ElMessage.success('更新成功')
-        } else {
-          await bookApi.createBook(bookForm)
-          ElMessage.success('添加成功')
-        }
-        dialogVisible.value = false
-        loadBooks()
-      } catch (error) {
-        console.error('Failed to save book:', error)
-        ElMessage.error('保存失败')
-      } finally {
-        submitLoading.value = false
-      }
+/**
+ * 处理表单提交
+ * 由 BookAutoFillDialog 组件触发
+ *
+ * @param {Object} formData - 表单数据
+ */
+async function handleFormSubmit(formData) {
+  try {
+    if (isEdit.value) {
+      await bookApi.updateBook(editId.value, formData)
+      ElMessage.success('更新成功')
+    } else {
+      await bookApi.createBook(formData)
+      ElMessage.success('添加成功')
     }
-  })
+    dialogVisible.value = false
+    loadBooks()
+  } catch (error) {
+    console.error('Failed to save book:', error)
+    ElMessage.error('保存失败')
+  }
+}
+
+/**
+ * 处理导入完成
+ * 刷新书籍列表
+ *
+ * @param {Object} result - 导入结果
+ */
+function handleImportComplete(result) {
+  if (result && result.successCount > 0) {
+    ElMessage.success(`成功导入 ${result.successCount} 本书籍`)
+    loadBooks()
+  }
 }
 
 async function deleteBook(book) {
@@ -443,20 +450,12 @@ function changePage(page) {
   }
 }
 
-function resetForm() {
-  Object.assign(bookForm, {
-    title: '',
-    author: '',
-    readingStatus: 'WANT_TO_READ',
-    pageCount: null,
-    currentPage: 0,
-    isbn: '',
-    publisher: '',
-    rating: null,
-    description: ''
-  })
-}
-
+/**
+ * 获取阅读状态的中文文本
+ *
+ * @param {string} status - 阅读状态
+ * @returns {string} 状态的中文文本
+ */
 function getStatusText(status) {
   const texts = {
     WANT_TO_READ: '想读',
@@ -588,6 +587,33 @@ function getStatusText(status) {
   color: #6b5344;
   margin: 0.5rem 0 0;
   font-weight: 500;
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.import-btn {
+  background: white;
+  border: 2px solid #8b6f47;
+  color: #8b6f47;
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.import-btn:hover {
+  background: #faf8f5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(107, 83, 68, 0.2);
 }
 
 .add-book-btn {

@@ -2,6 +2,7 @@ package com.bookrecord.controller;
 
 import com.bookrecord.dto.*;
 import com.bookrecord.entity.Book;
+import com.bookrecord.service.BookInfoService;
 import com.bookrecord.service.BookService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -17,6 +18,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/books")
 @RequiredArgsConstructor
@@ -24,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 public class BookController {
 
     private final BookService bookService;
+    private final BookInfoService bookInfoService;
 
     @PostMapping
     @Operation(summary = "创建新书籍", description = "添加一本书到书架")
@@ -125,5 +129,37 @@ public class BookController {
             @AuthenticationPrincipal UserDetails userDetails) {
         BookStatistics stats = bookService.getStatistics(userDetails.getUsername());
         return ResponseEntity.ok(ApiResponse.success(stats));
+    }
+
+    // ==================== 图书信息识别接口 ====================
+
+    /**
+     * 根据ISBN查询图书信息
+     * 调用外部图书API获取书籍详细信息，用于自动填充表单
+     */
+    @GetMapping("/isbn/{isbn}")
+    @Operation(summary = "根据ISBN查询图书信息", description = "调用外部API获取书籍详细信息，用于自动识别")
+    public ResponseEntity<ApiResponse<BookInfoResponse>> getBookByIsbn(
+            @Parameter(description = "ISBN编号（10位或13位）") @PathVariable String isbn) {
+        BookInfoResponse bookInfo = bookInfoService.getBookByIsbn(isbn);
+        if (bookInfo == null) {
+            return ResponseEntity.ok(ApiResponse.error("未找到该ISBN对应的图书信息"));
+        }
+        return ResponseEntity.ok(ApiResponse.success(bookInfo));
+    }
+
+    /**
+     * 根据书名搜索图书信息
+     * 返回匹配的图书列表供用户选择
+     */
+    @GetMapping("/search-info")
+    @Operation(summary = "根据书名搜索图书信息", description = "搜索匹配的图书列表供用户选择")
+    public ResponseEntity<ApiResponse<List<BookInfoResponse>>> searchBooksByTitle(
+            @Parameter(description = "书名关键词") @RequestParam String title) {
+        List<BookInfoResponse> books = bookInfoService.searchBooksByTitle(title);
+        if (books.isEmpty()) {
+            return ResponseEntity.ok(ApiResponse.error("未找到匹配的图书"));
+        }
+        return ResponseEntity.ok(ApiResponse.success(books));
     }
 }

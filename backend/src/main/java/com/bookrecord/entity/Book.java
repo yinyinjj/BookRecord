@@ -41,11 +41,18 @@ public class Book {
     @Column(length = 20)
     private String isbn;
 
+    /**
+     * 出版社
+     */
     @Column(length = 100)
     private String publisher;
 
-    @Column(name = "publish_date")
-    private LocalDate publishDate;
+    /**
+     * 出版日期（字符串格式，支持年份、年月、完整日期等多种格式）
+     * 例如：2015、2015-06、2015-06-15
+     */
+    @Column(name = "publish_date", length = 20)
+    private String publishDate;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "reading_status", nullable = false, length = 20)

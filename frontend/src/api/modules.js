@@ -57,6 +57,64 @@ export const bookApi = {
 
   getStatistics() {
     return api.get('/v1/books/statistics')
+  },
+
+  // ==================== 图书信息识别接口 ====================
+
+  /**
+   * 根据ISBN查询图书信息
+   * 调用外部API获取书籍详细信息，用于自动识别
+   * @param {string} isbn - ISBN编号（10位或13位）
+   * @returns {Promise} 图书信息
+   */
+  getBookByIsbn(isbn) {
+    return api.get(`/v1/books/isbn/${isbn}`)
+  },
+
+  /**
+   * 根据书名搜索图书信息
+   * 返回匹配的图书列表供用户选择
+   * @param {string} title - 书名关键词
+   * @returns {Promise} 图书信息列表
+   */
+  searchBooksByTitle(title) {
+    return api.get('/v1/books/search-info', { params: { title } })
+  },
+
+  // ==================== 书单导入接口 ====================
+
+  /**
+   * 预览导入文件
+   * 上传CSV文件并返回解析预览结果
+   * @param {FormData} formData - 包含文件的FormData对象
+   * @returns {Promise} 预览结果
+   */
+  previewImport(formData) {
+    return api.post('/v1/books/import/preview', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+
+  /**
+   * 确认导入书单
+   * 执行批量导入操作
+   * @param {Object} data - 导入确认请求数据
+   * @param {string} data.sourceType - 文件来源类型（douban/weread）
+   * @param {string} data.duplicateStrategy - 重复处理策略（skip/overwrite）
+   * @param {Array<number>} data.selectedIndexes - 要导入的书籍索引列表
+   * @returns {Promise} 导入结果
+   */
+  confirmImport(data) {
+    return api.post('/v1/books/import/confirm', data)
+  },
+
+  /**
+   * 取消导入
+   * 清除缓存的预览数据
+   * @returns {Promise}
+   */
+  cancelImport() {
+    return api.delete('/v1/books/import/cancel')
   }
 }
 

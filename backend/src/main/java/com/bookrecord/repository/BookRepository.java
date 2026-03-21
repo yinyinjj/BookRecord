@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 书籍数据访问层
@@ -104,4 +105,27 @@ public interface BookRepository extends JpaRepository<Book, Long> {
             @Param("endDate") LocalDateTime endDate,
             Pageable pageable
     );
+
+    // ==================== 书单导入相关查询 ====================
+
+    /**
+     * 根据用户和ISBN查找书籍
+     * 用于导入时检测重复书籍
+     *
+     * @param user 用户实体
+     * @param isbn ISBN编号
+     * @return Optional<Book> 书籍（如果存在）
+     */
+    Optional<Book> findByUserAndIsbn(User user, String isbn);
+
+    /**
+     * 根据用户、书名和作者查找书籍
+     * 用于导入时检测重复书籍（当没有ISBN时使用）
+     *
+     * @param user 用户实体
+     * @param title 书名
+     * @param author 作者
+     * @return Optional<Book> 书籍（如果存在）
+     */
+    Optional<Book> findByUserAndTitleAndAuthor(User user, String title, String author);
 }
