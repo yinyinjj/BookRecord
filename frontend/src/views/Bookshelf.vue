@@ -89,7 +89,7 @@
     <div v-else class="books-grid">
       <div v-for="book in books" :key="book.id" class="book-card" @click="viewBook(book.id)">
         <div class="book-cover">
-          <img v-if="book.coverUrl" :src="book.coverUrl" :alt="book.title" />
+          <img v-if="book.coverUrl" :src="getProxyImageUrl(book.coverUrl)" :alt="book.title" referrerpolicy="no-referrer" />
           <div v-else class="cover-placeholder">
             <span>{{ book.title.charAt(0) }}</span>
           </div>
@@ -179,6 +179,8 @@ import { ElMessage } from 'element-plus'
 import BookAutoFillDialog from '@/components/BookAutoFillDialog.vue'
 // 导入书单导入对话框组件
 import BookImportDialog from '@/components/BookImportDialog.vue'
+// 导入图片代理工具
+import { getProxyImageUrl } from '@/utils/image'
 
 const router = useRouter()
 

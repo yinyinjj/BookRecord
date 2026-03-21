@@ -54,12 +54,13 @@ public class ImportService {
 
         // 根据文件类型解析
         List<ImportPreviewItem> items;
-        if ("douban".equals(sourceType)) {
+        if ("douban".equals(sourceType) || "calibre".equals(sourceType)) {
+            // Calibre 和豆瓣使用相同的解析器（CSV格式相似）
             items = parseDoubanCsv(file, username);
         } else if ("weread".equals(sourceType)) {
             items = parseWereadFile(file, username);
         } else {
-            throw new BadRequestException("不支持的文件格式，请上传豆瓣或微信读书导出的书单文件");
+            throw new BadRequestException("不支持的文件格式，请上传豆瓣、微信读书或 Calibre 导出的书单文件");
         }
 
         // 统计数量
@@ -108,12 +109,20 @@ public class ImportService {
             if (filename.toLowerCase().contains("weread") || filename.contains("微信读书")) {
                 return "weread";
             }
+            // Calibre 导出的文件名可能包含 "calibre"
+            if (filename.toLowerCase().contains("calibre")) {
+                return "calibre";
+            }
         }
 
         // 尝试通过内容判断
         try {
             String content = readFirstLine(file);
             if (content != null) {
+                // Calibre 特征：包含英文字段名 title, authors（复数）
+                if (content.contains("authors") && content.contains("title")) {
+                    return "calibre";
+                }
                 // 豆瓣CSV的特征：包含"书名"、"作者"、"ISBN"等字段
                 if (content.contains("书名") && content.contains("作者")) {
                     return "douban";
@@ -186,7 +195,7 @@ public class ImportService {
         int lineNumber = 0;
         int titleIndex = -1, authorIndex = -1, isbnIndex = -1;
         int ratingIndex = -1, statusIndex = -1, tagsIndex = -1, notesIndex = -1;
-        int publisherIndex = -1;
+        int publisherIndex = -1, coverIndex = -1;  // v1.5.0: 新增封面索引
         boolean hasHeader = false;
 
         for (String line : lines) {
@@ -217,6 +226,7 @@ public class ImportService {
                                 break;
                             case "作者":
                             case "author":
+                            case "authors":  // Calibre 使用复数形式
                                 authorIndex = i;
                                 break;
                             case "ISBN":
@@ -246,6 +256,13 @@ public class ImportService {
                             case "publisher":
                                 publisherIndex = i;
                                 break;
+                            // v1.5.0: 新增封面字段识别
+                            case "封面":
+                            case "cover":
+                            case "coverUrl":
+                            case "cover_url":
+                                coverIndex = i;
+                                break;
                         }
                     }
                     log.info("豆瓣CSV列索引: 书名={}, 作者={}, ISBN={}, 评分={}, 状态={}, 标签={}",
@@ -269,7 +286,7 @@ public class ImportService {
             try {
                 ImportPreviewItem item = parseDoubanRow(fields,
                         titleIndex, authorIndex, isbnIndex, ratingIndex,
-                        statusIndex, tagsIndex, notesIndex, publisherIndex, user);
+                        statusIndex, tagsIndex, notesIndex, publisherIndex, coverIndex, user);
                 items.add(item);
             } catch (Exception e) {
                 log.warn("解析第{}行失败: {}", lineNumber, e.getMessage());
@@ -366,7 +383,7 @@ public class ImportService {
     private ImportPreviewItem parseDoubanRow(String[] fields,
                                               int titleIndex, int authorIndex, int isbnIndex,
                                               int ratingIndex, int statusIndex, int tagsIndex,
-                                              int notesIndex, int publisherIndex, User user) {
+                                              int notesIndex, int publisherIndex, int coverIndex, User user) {
         // 提取字段值
         String title = getValue(fields, titleIndex);
         String author = getValue(fields, authorIndex);
@@ -376,17 +393,27 @@ public class ImportService {
         String tags = getValue(fields, tagsIndex);
         String notes = getValue(fields, notesIndex);
         String publisher = getValue(fields, publisherIndex);
+        String coverUrl = getValue(fields, coverIndex);  // v1.5.0: 提取封面URL
+
+        // 处理 Calibre 的多作者格式（使用 & 分隔）
+        if (author != null && author.contains(" & ")) {
+            author = author.replace(" & ", "、");
+        }
 
         // 验证书名（必填）
         if (title == null || title.trim().isEmpty()) {
             throw new BadRequestException("书名不能为空");
         }
 
-        // 解析评分
+        // 解析评分（豆瓣为10分制，系统为5分制，需要转换）
         Double rating = null;
         if (ratingStr != null && !ratingStr.isEmpty()) {
             try {
-                rating = Double.parseDouble(ratingStr.trim());
+                double rawRating = Double.parseDouble(ratingStr.trim());
+                // 豆瓣评分转换为5分制：评分 / 2，保留一位小数
+                // 例如：豆瓣8.5 → 系统4.3，豆瓣9.0 → 系统4.5
+                rating = Math.round(rawRating / 2.0 * 10) / 10.0;
+                log.debug("评分转换: 豆瓣{} → 系统{}", rawRating, rating);
             } catch (NumberFormatException e) {
                 log.warn("评分解析失败: {}", ratingStr);
             }
@@ -416,6 +443,7 @@ public class ImportService {
                 .author(author != null ? author.trim() : null)
                 .isbn(isbn != null ? isbn.trim() : null)
                 .publisher(publisher != null ? publisher.trim() : null)
+                .coverUrl(coverUrl != null ? coverUrl.trim() : null)  // v1.5.0: 设置封面URL
                 .readingStatus(status != null ? status.trim() : null)
                 .rating(rating)
                 .tags(tags != null ? tags.trim() : null)
@@ -490,6 +518,7 @@ public class ImportService {
                                 break;
                             case "作者":
                             case "author":
+                            case "authors":  // Calibre 使用复数形式
                                 authorIndex = i;
                                 break;
                             case "ISBN":

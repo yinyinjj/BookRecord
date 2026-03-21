@@ -5,7 +5,7 @@
       <!-- 书籍头部信息区域 -->
       <div class="book-header">
         <div class="book-cover">
-          <img :src="book.coverUrl || defaultCover" alt="cover" />
+          <img :src="getProxyImageUrl(book.coverUrl) || defaultCover" alt="cover" referrerpolicy="no-referrer" />
         </div>
         <div class="book-info">
           <h2>{{ book.title }}</h2>
@@ -259,6 +259,8 @@ import { bookApi, readingNoteApi, quoteApi } from '@/api/modules'
 import { ElMessage } from 'element-plus'
 // 导入块级富文本编辑器组件
 import BlockEditor from '@/components/BlockEditor.vue'
+// 导入图片代理工具
+import { getProxyImageUrl } from '@/utils/image'
 
 // ==================== 路由参数 ====================
 

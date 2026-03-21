@@ -117,7 +117,7 @@
                     @click="selectSearchResult(book)"
                   >
                     <div class="result-cover">
-                      <img v-if="book.coverUrl" :src="book.coverUrl" :alt="book.title" />
+                      <img v-if="book.coverUrl" :src="getProxyImageUrl(book.coverUrl)" :alt="book.title" referrerpolicy="no-referrer" />
                       <div v-else class="cover-fallback">
                         <span>{{ book.title?.charAt(0) || '?' }}</span>
                       </div>
@@ -225,7 +225,7 @@
               <label class="cover-label">封面</label>
               <div class="cover-preview">
                 <div v-if="formData.coverUrl" class="cover-image-wrapper">
-                  <img :src="formData.coverUrl" alt="封面预览" class="cover-image" />
+                  <img :src="getProxyImageUrl(formData.coverUrl)" alt="封面预览" class="cover-image" referrerpolicy="no-referrer" />
                   <button class="remove-cover-btn" @click="formData.coverUrl = ''">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M18 6L6 18M6 6l12 12"/>
@@ -319,6 +319,8 @@
 import { ref, reactive, watch, computed } from 'vue'
 import { bookApi } from '@/api/modules'
 import { ElMessage } from 'element-plus'
+// 导入图片代理工具
+import { getProxyImageUrl } from '@/utils/image'
 
 // ==================== Props 定义 ====================
 
