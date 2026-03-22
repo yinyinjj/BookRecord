@@ -138,4 +138,26 @@ public interface ReadingNoteRepository extends JpaRepository<ReadingNote, Long> 
             @Param("endDate") LocalDateTime endDate,
             Pageable pageable
     );
+
+    // ==================== 统计分析相关查询 ====================
+
+    /**
+     * 根据用户查询所有感悟
+     * 用于统计分析感悟类型分布和标签统计
+     *
+     * @param user 用户实体
+     * @return List<ReadingNote> 感悟列表
+     */
+    @Query("SELECT rn FROM ReadingNote rn WHERE rn.book.user = :user")
+    List<ReadingNote> findByUser(@Param("user") User user);
+
+    /**
+     * 根据用户和感悟类型统计数量
+     *
+     * @param user 用户实体
+     * @param noteType 感悟类型
+     * @return Long 感悟数量
+     */
+    @Query("SELECT COUNT(rn) FROM ReadingNote rn WHERE rn.book.user = :user AND rn.noteType = :noteType")
+    Long countByUserAndNoteType(@Param("user") User user, @Param("noteType") ReadingNote.NoteType noteType);
 }

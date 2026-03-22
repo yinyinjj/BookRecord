@@ -71,19 +71,35 @@ public class BookService {
 
         Book book = findBookByIdAndUser(id, username);
 
+        // 保存旧的阅读状态
+        Book.ReadingStatus oldStatus = book.getReadingStatus();
+        Book.ReadingStatus newStatus = request.getReadingStatus();
+
         book.setTitle(request.getTitle());
         book.setAuthor(request.getAuthor());
         book.setCoverUrl(request.getCoverUrl());
         book.setIsbn(request.getIsbn());
         book.setPublisher(request.getPublisher());
         book.setPublishDate(request.getPublishDate());
-        book.setReadingStatus(request.getReadingStatus());
+        book.setReadingStatus(newStatus);
         book.setStartDate(request.getStartDate());
         book.setFinishDate(request.getFinishDate());
         book.setRating(request.getRating());
         book.setPageCount(request.getPageCount());
         book.setCurrentPage(request.getCurrentPage());
         book.setDescription(request.getDescription());
+
+        // 如果状态变为 READING 且没有开始日期，自动设置开始日期
+        if (newStatus == Book.ReadingStatus.READING && book.getStartDate() == null) {
+            book.setStartDate(java.time.LocalDate.now());
+            log.info("自动设置开始日期: {}", book.getStartDate());
+        }
+
+        // 如果状态变为 COMPLETED 且没有完成日期，自动设置完成日期
+        if (newStatus == Book.ReadingStatus.COMPLETED && book.getFinishDate() == null) {
+            book.setFinishDate(java.time.LocalDate.now());
+            log.info("自动设置完成日期: {}", book.getFinishDate());
+        }
 
         book = bookRepository.save(book);
         log.info("Book updated successfully: {}", book.getId());

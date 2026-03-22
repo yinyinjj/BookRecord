@@ -172,7 +172,7 @@
  * 集成书籍自动识别功能（ISBN识别和书名搜索）
  */
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { bookApi } from '@/api/modules'
 import { ElMessage } from 'element-plus'
 // 导入书籍自动识别对话框组件
@@ -183,6 +183,7 @@ import BookImportDialog from '@/components/BookImportDialog.vue'
 import { getProxyImageUrl } from '@/utils/image'
 
 const router = useRouter()
+const route = useRoute()
 
 // ==================== 响应式状态定义 ====================
 
@@ -238,7 +239,13 @@ const undoNotification = ref({
 // ==================== 生命周期钩子 ====================
 
 onMounted(() => {
-  loadBooks()
+  // 检查 URL 参数中是否有状态筛选条件
+  if (route.query.status) {
+    filterStatus.value = route.query.status
+    handleFilter()
+  } else {
+    loadBooks()
+  }
 })
 
 onBeforeUnmount(() => {

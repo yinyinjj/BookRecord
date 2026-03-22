@@ -267,11 +267,15 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import { readingNoteApi } from '@/api/modules'
 import { ElMessage, ElNotification } from 'element-plus'
 import ShareDialog from '@/components/ShareDialog.vue'
 // 导入块级富文本编辑器组件
 import BlockEditor from '@/components/BlockEditor.vue'
+
+// 路由实例，用于读取 URL 参数
+const route = useRoute()
 
 const loading = ref(false)
 const notes = ref([])
@@ -324,7 +328,13 @@ function setContentRef(id, el) {
 }
 
 onMounted(() => {
-  loadNotes()
+  // 检查 URL 参数中是否有感悟类型筛选条件
+  if (route.query.type) {
+    filterType.value = route.query.type
+    handleFilter()
+  } else {
+    loadNotes()
+  }
 })
 
 async function loadNotes() {

@@ -13,6 +13,7 @@
           <el-menu-item index="/bookshelf">我的书架</el-menu-item>
           <el-menu-item index="/notes">读书感悟</el-menu-item>
           <el-menu-item index="/quotes">金句收藏</el-menu-item>
+          <el-menu-item index="/statistics">阅读统计</el-menu-item>
         </el-menu>
         <div class="header-actions">
           <router-link to="/search" class="search-link">

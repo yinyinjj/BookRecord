@@ -258,3 +258,26 @@ export const shareApi = {
     return api.get(`/public/share/${token}`)
   }
 }
+
+/**
+ * 统计 API 模块
+ * 提供阅读统计数据相关接口
+ */
+export const statisticsApi = {
+  /**
+   * 获取阅读趋势统计数据
+   * @param {string} range - 时间范围：6m（近6个月）、1y（近1年）、all（全部）
+   * @returns {Promise} 趋势统计数据
+   */
+  getTrend(range = '1y') {
+    return api.get('/v1/statistics/trend', { params: { range } })
+  },
+
+  /**
+   * 获取分类统计数据
+   * @returns {Promise} 分类统计数据（阅读状态分布、感悟类型分布、热门标签）
+   */
+  getCategories() {
+    return api.get('/v1/statistics/categories')
+  }
+}

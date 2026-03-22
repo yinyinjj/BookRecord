@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -128,4 +129,39 @@ public interface BookRepository extends JpaRepository<Book, Long> {
      * @return Optional<Book> 书籍（如果存在）
      */
     Optional<Book> findByUserAndTitleAndAuthor(User user, String title, String author);
+
+    // ==================== 统计分析相关查询 ====================
+
+    /**
+     * 根据用户和时间范围查询书籍
+     * 用于统计指定时间范围内新增的书籍
+     *
+     * @param user 用户实体
+     * @param startDate 起始时间
+     * @param endDate 结束时间
+     * @return List<Book> 书籍列表
+     */
+    @Query("SELECT b FROM Book b WHERE b.user = :user AND b.createdAt >= :startDate AND b.createdAt <= :endDate")
+    List<Book> findByUserAndCreatedAtBetween(
+            @Param("user") User user,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
+
+    /**
+     * 根据用户、阅读状态和完成时间范围查询书籍
+     * 用于统计指定时间范围内完成的书籍
+     *
+     * @param user 用户实体
+     * @param status 阅读状态
+     * @param startDate 起始日期
+     * @param endDate 结束日期
+     * @return List<Book> 书籍列表
+     */
+    @Query("SELECT b FROM Book b WHERE b.user = :user AND b.readingStatus = :status " +
+           "AND b.finishDate >= :startDate AND b.finishDate <= :endDate")
+    List<Book> findByUserAndReadingStatusAndFinishDateBetween(
+            @Param("user") User user,
+            @Param("status") Book.ReadingStatus status,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 }

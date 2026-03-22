@@ -137,4 +137,16 @@ public interface QuoteRepository extends JpaRepository<Quote, Long> {
             @Param("endDate") LocalDateTime endDate,
             Pageable pageable
     );
+
+    // ==================== 统计分析相关查询 ====================
+
+    /**
+     * 根据用户查询所有金句
+     * 用于统计分析标签分布
+     *
+     * @param user 用户实体
+     * @return List<Quote> 金句列表
+     */
+    @Query("SELECT q FROM Quote q WHERE q.book.user = :user")
+    List<Quote> findByUser(@Param("user") User user);
 }
