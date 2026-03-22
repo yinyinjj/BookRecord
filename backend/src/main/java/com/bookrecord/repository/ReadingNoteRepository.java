@@ -160,4 +160,27 @@ public interface ReadingNoteRepository extends JpaRepository<ReadingNote, Long> 
      */
     @Query("SELECT COUNT(rn) FROM ReadingNote rn WHERE rn.book.user = :user AND rn.noteType = :noteType")
     Long countByUserAndNoteType(@Param("user") User user, @Param("noteType") ReadingNote.NoteType noteType);
+
+    // ==================== 年度统计相关查询 ====================
+
+    /**
+     * 根据用户和年份统计感悟数量
+     *
+     * @param user 用户实体
+     * @param year 年份
+     * @return Long 感悟数量
+     */
+    @Query("SELECT COUNT(rn) FROM ReadingNote rn WHERE rn.book.user = :user AND YEAR(rn.createdAt) = :year")
+    Long countByUserAndYear(@Param("user") User user, @Param("year") Integer year);
+
+    /**
+     * 根据用户和年份查询感悟列表
+     * 用于年度统计关键词提取和阅读时间分析
+     *
+     * @param user 用户实体
+     * @param year 年份
+     * @return List<ReadingNote> 感悟列表
+     */
+    @Query("SELECT rn FROM ReadingNote rn WHERE rn.book.user = :user AND YEAR(rn.createdAt) = :year")
+    List<ReadingNote> findByUserAndYear(@Param("user") User user, @Param("year") Integer year);
 }

@@ -6,6 +6,231 @@
       <p class="page-subtitle">记录阅读足迹，见证成长轨迹</p>
     </div>
 
+    <!-- ==================== 年度阅读报告卡片 ==================== -->
+    <div class="annual-report-card">
+      <!-- 卡片头部 -->
+      <div class="card-header">
+        <div class="header-left">
+          <h2 class="card-title">{{ currentYear }} 年度阅读报告</h2>
+          <p class="card-desc">回顾您的年度阅读收获</p>
+        </div>
+
+        <!-- 年份选择器 -->
+        <div class="year-selector">
+          <button
+            v-for="year in availableYears"
+            :key="year"
+            :class="['year-btn', { active: currentYear === year }]"
+            @click="changeYear(year)"
+          >
+            {{ year }}
+          </button>
+        </div>
+      </div>
+
+      <!-- 年度数据加载中 -->
+      <div v-if="annualLoading" class="annual-loading">
+        <div class="loading-spinner"></div>
+        <p>正在生成年度报告...</p>
+      </div>
+
+      <!-- 年度统计数据 -->
+      <div v-else class="annual-content">
+        <!-- 核心数据卡片 -->
+        <div class="stats-grid">
+          <div class="stat-card completed">
+            <div class="stat-icon">📚</div>
+            <div class="stat-info">
+              <div class="stat-value">{{ annualData.completedBooksCount || 0 }}</div>
+              <div class="stat-label">完成书籍</div>
+            </div>
+          </div>
+          <div class="stat-card new-books">
+            <div class="stat-icon">📖</div>
+            <div class="stat-info">
+              <div class="stat-value">{{ annualData.newBooksCount || 0 }}</div>
+              <div class="stat-label">新增书籍</div>
+            </div>
+          </div>
+          <div class="stat-card hours">
+            <div class="stat-icon">⏱️</div>
+            <div class="stat-info">
+              <div class="stat-value">{{ annualData.estimatedReadingHours || 0 }}</div>
+              <div class="stat-label">阅读时长(小时)</div>
+            </div>
+          </div>
+          <div class="stat-card pages">
+            <div class="stat-icon">📄</div>
+            <div class="stat-info">
+              <div class="stat-value">{{ formatNumber(annualData.totalPagesRead) }}</div>
+              <div class="stat-label">阅读页数</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 次级统计 -->
+        <div class="secondary-stats">
+          <div class="secondary-stat">
+            <span class="secondary-icon">✏️</span>
+            <span class="secondary-value">{{ annualData.notesCount || 0 }}</span>
+            <span class="secondary-label">条感悟</span>
+          </div>
+          <div class="secondary-divider"></div>
+          <div class="secondary-stat">
+            <span class="secondary-icon">💬</span>
+            <span class="secondary-value">{{ annualData.quotesCount || 0 }}</span>
+            <span class="secondary-label">条金句</span>
+          </div>
+        </div>
+
+        <!-- 详细分析区域 -->
+        <div class="analysis-section">
+          <!-- 阅读时间段分布 -->
+          <div class="analysis-card">
+            <h3 class="analysis-title">阅读习惯分析</h3>
+            <div class="time-distribution" v-if="annualData.readingTimeDistribution?.length > 0">
+              <div
+                v-for="item in annualData.readingTimeDistribution"
+                :key="item.period"
+                class="time-bar-container"
+              >
+                <div class="time-label">{{ item.label }}</div>
+                <div class="time-bar-wrapper">
+                  <div
+                    class="time-bar"
+                    :style="{ width: getTimeBarWidth(item.count) }"
+                  ></div>
+                </div>
+                <div class="time-count">{{ item.count }} 次</div>
+              </div>
+            </div>
+            <div v-else class="no-data">暂无数据</div>
+          </div>
+
+          <!-- 年度关键词 -->
+          <div class="analysis-card">
+            <h3 class="analysis-title">年度关键词</h3>
+            <div class="keywords-cloud" v-if="annualData.topKeywords?.length > 0">
+              <span
+                v-for="(keyword, index) in annualData.topKeywords"
+                :key="keyword.word"
+                class="keyword-tag"
+                :style="getKeywordStyle(keyword.count, index)"
+              >
+                {{ keyword.word }}
+              </span>
+            </div>
+            <div v-else class="no-data">暂无关键词</div>
+          </div>
+
+          <!-- 年度最佳书籍 -->
+          <div class="analysis-card books-highlight">
+            <h3 class="analysis-title">年度亮点</h3>
+            <div class="highlight-books">
+              <!-- 年度最佳书籍 -->
+              <div class="highlight-book" v-if="annualData.bookOfTheYear" @click="goToBook(annualData.bookOfTheYear.id)">
+                <div class="highlight-badge gold">年度最佳</div>
+                <div class="highlight-info">
+                  <div class="highlight-title">{{ annualData.bookOfTheYear.title }}</div>
+                  <div class="highlight-author" v-if="annualData.bookOfTheYear.author">
+                    {{ annualData.bookOfTheYear.author }}
+                  </div>
+                  <div class="highlight-rating" v-if="annualData.bookOfTheYear.rating">
+                    <span v-for="i in 5" :key="i" :class="['star', { filled: i <= annualData.bookOfTheYear.rating }]">★</span>
+                  </div>
+                </div>
+              </div>
+              <!-- 年度最长书籍 -->
+              <div class="highlight-book" v-if="annualData.longestBook" @click="goToBook(annualData.longestBook.id)">
+                <div class="highlight-badge blue">最长阅读</div>
+                <div class="highlight-info">
+                  <div class="highlight-title">{{ annualData.longestBook.title }}</div>
+                  <div class="highlight-author" v-if="annualData.longestBook.author">
+                    {{ annualData.longestBook.author }}
+                  </div>
+                  <div class="highlight-pages" v-if="annualData.longestBook.totalPages">
+                    {{ annualData.longestBook.totalPages }} 页
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-if="!annualData.bookOfTheYear && !annualData.longestBook" class="no-data">
+              暂无年度亮点书籍
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 阅读效率分析卡片 ==================== -->
+    <div class="efficiency-card">
+      <div class="card-header">
+        <div class="header-left">
+          <h2 class="card-title">阅读效率分析</h2>
+          <p class="card-desc">了解您的阅读习惯，优化阅读效率</p>
+        </div>
+      </div>
+
+      <!-- 加载状态 -->
+      <div v-if="efficiencyLoading" class="efficiency-loading">
+        <div class="loading-spinner light"></div>
+        <p>正在分析阅读效率...</p>
+      </div>
+
+      <!-- 效率数据 -->
+      <div v-else class="efficiency-content">
+        <!-- 效率指标 -->
+        <div class="efficiency-metrics">
+          <div class="metric-item">
+            <div class="metric-icon">📖</div>
+            <div class="metric-info">
+              <div class="metric-value">{{ efficiencyData.averageReadingSpeed?.toFixed(1) || 0 }}</div>
+              <div class="metric-label">平均阅读速度(页/天)</div>
+            </div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-icon">📅</div>
+            <div class="metric-info">
+              <div class="metric-value">{{ efficiencyData.averageCompletionDays?.toFixed(1) || 0 }}</div>
+              <div class="metric-label">平均完成天数</div>
+            </div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-icon">✏️</div>
+            <div class="metric-info">
+              <div class="metric-value">{{ efficiencyData.noteRecordFrequency?.toFixed(1) || 0 }}</div>
+              <div class="metric-label">感悟频率(次/周)</div>
+            </div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-icon">💬</div>
+            <div class="metric-info">
+              <div class="metric-value">{{ efficiencyData.quoteRecordFrequency?.toFixed(1) || 0 }}</div>
+              <div class="metric-label">金句频率(次/周)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 阅读建议 -->
+        <div class="advice-section" v-if="efficiencyData.readingAdvices?.length > 0">
+          <h3 class="advice-title">阅读建议</h3>
+          <div class="advice-list">
+            <div
+              v-for="advice in efficiencyData.readingAdvices"
+              :key="advice.type"
+              class="advice-item"
+            >
+              <span class="advice-icon">{{ advice.icon }}</span>
+              <div class="advice-content">
+                <div class="advice-name">{{ advice.title }}</div>
+                <div class="advice-text">{{ advice.content }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ==================== 趋势图表卡片 ==================== -->
     <div class="chart-card">
       <!-- 卡片头部 -->
@@ -132,6 +357,7 @@ const noteTypeChartRef = ref(null)
 /** 加载状态 */
 const trendLoading = ref(false)
 const categoryLoading = ref(false)
+const annualLoading = ref(false)
 
 /** ECharts 实例 */
 let trendChartInstance = null
@@ -141,6 +367,19 @@ let noteTypeChartInstance = null
 /** 当前选中的时间范围 */
 const currentRange = ref('1y')
 
+/** 当前选中的年份 */
+const currentYear = ref(new Date().getFullYear())
+
+/** 可选年份列表 */
+const availableYears = computed(() => {
+  const current = new Date().getFullYear()
+  const years = []
+  for (let y = current; y >= 2020; y--) {
+    years.push(y)
+  }
+  return years
+})
+
 /** 趋势数据 */
 const trendData = ref([])
 
@@ -148,6 +387,15 @@ const trendData = ref([])
 const statusData = ref([])
 const noteTypeData = ref([])
 const topTags = ref([])
+
+/** 年度报告数据 */
+const annualData = ref({})
+
+/** 效率分析数据 */
+const efficiencyData = ref({})
+
+/** 效率分析加载状态 */
+const efficiencyLoading = ref(false)
 
 /** 时间范围选项配置 */
 const timeRanges = [
@@ -217,6 +465,8 @@ const totalCompletedBooks = computed(() => {
  * 组件挂载时加载数据
  */
 onMounted(() => {
+  loadAnnualData()
+  loadEfficiencyData()
   loadTrendData()
   loadCategoryData()
   // 监听窗口大小变化
@@ -232,6 +482,99 @@ onUnmounted(() => {
 })
 
 // ==================== 方法定义 ====================
+
+/**
+ * 加载年度报告数据
+ */
+async function loadAnnualData() {
+  annualLoading.value = true
+  try {
+    const response = await api.get('/v1/statistics/annual', {
+      params: { year: currentYear.value }
+    })
+    annualData.value = response.data || {}
+  } catch (error) {
+    console.error('加载年度报告失败:', error)
+    annualData.value = {}
+  } finally {
+    annualLoading.value = false
+  }
+}
+
+/**
+ * 加载效率分析数据
+ */
+async function loadEfficiencyData() {
+  efficiencyLoading.value = true
+  try {
+    const response = await api.get('/v1/statistics/efficiency')
+    efficiencyData.value = response.data || {}
+  } catch (error) {
+    console.error('加载效率分析失败:', error)
+    efficiencyData.value = {}
+  } finally {
+    efficiencyLoading.value = false
+  }
+}
+
+/**
+ * 切换年份
+ */
+function changeYear(year) {
+  if (currentYear.value === year) return
+  currentYear.value = year
+  loadAnnualData()
+}
+
+/**
+ * 格式化数字显示
+ */
+function formatNumber(num) {
+  if (!num) return '0'
+  if (num >= 10000) {
+    return (num / 10000).toFixed(1) + '万'
+  }
+  return num.toLocaleString()
+}
+
+/**
+ * 计算时间条宽度百分比
+ */
+function getTimeBarWidth(count) {
+  const distribution = annualData.value.readingTimeDistribution || []
+  const maxCount = Math.max(...distribution.map(d => d.count), 1)
+  return Math.max((count / maxCount) * 100, 5) + '%'
+}
+
+/**
+ * 计算关键词样式
+ */
+function getKeywordStyle(count, index) {
+  const keywords = annualData.value.topKeywords || []
+  const maxCount = keywords[0]?.count || 1
+  const minSize = 14
+  const maxSize = 26
+  const size = minSize + (count / maxCount) * (maxSize - minSize)
+
+  const colors = [
+    '#4a9c7b', '#d4a84b', '#5b8ff9', '#e690d1',
+    '#73c0de', '#3ba272', '#fc8452', '#9a60b4'
+  ]
+  const color = colors[index % colors.length]
+
+  return {
+    fontSize: `${size}px`,
+    color: color,
+    opacity: 0.7 + (count / maxCount) * 0.3
+  }
+}
+
+/**
+ * 跳转到书籍详情页
+ */
+function goToBook(bookId) {
+  router.push(`/books/${bookId}`)
+}
 
 /**
  * 加载趋势统计数据
@@ -576,6 +919,488 @@ function disposeCharts() {
   margin: 0;
 }
 
+/* ==================== 年度报告卡片 ==================== */
+.annual-report-card {
+  background: linear-gradient(135deg, #1a2a3a 0%, #2d4a5e 100%);
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 32px;
+  color: #fff;
+  box-shadow: 0 8px 32px rgba(26, 42, 58, 0.3);
+}
+
+.annual-report-card .card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+  padding: 0;
+  border: none;
+}
+
+.annual-report-card .card-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 6px 0;
+}
+
+.annual-report-card .card-desc {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+/* 年份选择器 */
+.year-selector {
+  display: flex;
+  gap: 8px;
+}
+
+.year-btn {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.year-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.year-btn.active {
+  color: #1a2a3a;
+  background: #fff;
+  border-color: #fff;
+}
+
+/* 加载状态 */
+.annual-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 0;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.annual-loading p {
+  margin-top: 16px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+}
+
+/* 核心数据卡片 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  backdrop-filter: blur(10px);
+}
+
+.stat-icon {
+  font-size: 32px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 4px;
+}
+
+.stat-card.completed .stat-icon { opacity: 1; }
+.stat-card.new-books .stat-icon { opacity: 0.9; }
+.stat-card.hours .stat-icon { opacity: 0.85; }
+.stat-card.pages .stat-icon { opacity: 0.8; }
+
+/* 次级统计 */
+.secondary-stats {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 16px 0;
+  margin-bottom: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.secondary-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.secondary-icon {
+  font-size: 18px;
+}
+
+.secondary-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.secondary-label {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.secondary-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* 分析区域 */
+.analysis-section {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.analysis-card {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.analysis-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 阅读时间分布 */
+.time-distribution {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.time-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.time-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  width: 100px;
+  flex-shrink: 0;
+}
+
+.time-bar-wrapper {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.time-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #4a9c7b 0%, #6bc4a0 100%);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.time-count {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  width: 50px;
+  text-align: right;
+}
+
+/* 关键词云 */
+.keywords-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  align-content: center;
+  min-height: 120px;
+}
+
+.keyword-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  cursor: default;
+  transition: transform 0.2s ease;
+}
+
+.keyword-tag:hover {
+  transform: scale(1.1);
+}
+
+/* 年度亮点书籍 */
+.books-highlight {
+  grid-column: span 1;
+}
+
+.highlight-books {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.highlight-book {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.highlight-book:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.highlight-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.highlight-badge.gold {
+  background: linear-gradient(135deg, #d4a84b 0%, #f0c674 100%);
+  color: #1a2a3a;
+}
+
+.highlight-badge.blue {
+  background: linear-gradient(135deg, #5b8ff9 0%, #8bb8ff 100%);
+  color: #1a2a3a;
+}
+
+.highlight-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.highlight-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.highlight-author {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 2px;
+}
+
+.highlight-rating {
+  margin-top: 4px;
+}
+
+.highlight-rating .star {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.highlight-rating .star.filled {
+  color: #d4a84b;
+}
+
+.highlight-pages {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 2px;
+}
+
+.no-data {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  padding: 20px 0;
+}
+
+/* ==================== 效率分析卡片 ==================== */
+.efficiency-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  margin-bottom: 32px;
+}
+
+.efficiency-card .card-header {
+  padding: 24px 28px 16px;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.efficiency-card .card-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 6px 0;
+}
+
+.efficiency-card .card-desc {
+  font-size: 13px;
+  color: #909399;
+  margin: 0;
+}
+
+.efficiency-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 0;
+}
+
+.loading-spinner.light {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #f0f0f0;
+  border-top-color: #4a9c7b;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.efficiency-loading p {
+  margin-top: 16px;
+  color: #909399;
+  font-size: 14px;
+}
+
+.efficiency-content {
+  padding: 24px 28px;
+}
+
+/* 效率指标 */
+.efficiency-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.metric-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 12px;
+}
+
+.metric-icon {
+  font-size: 28px;
+}
+
+.metric-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.metric-label {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 2px;
+}
+
+/* 阅读建议 */
+.advice-section {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 20px;
+}
+
+.advice-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 16px 0;
+}
+
+.advice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.advice-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #f8faf8 0%, #f5f9f7 100%);
+  border-radius: 10px;
+  border-left: 3px solid #4a9c7b;
+}
+
+.advice-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.advice-content {
+  flex: 1;
+}
+
+.advice-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 4px;
+}
+
+.advice-text {
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.5;
+}
+
 /* ==================== 图表卡片 ==================== */
 .chart-card {
   background: #ffffff;
@@ -814,6 +1639,29 @@ function disposeCharts() {
   .tag-card {
     grid-column: span 2;
   }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .analysis-section {
+    grid-template-columns: 1fr;
+  }
+
+  .annual-report-card .card-header {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .year-selector {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .efficiency-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 768px) {
@@ -857,6 +1705,58 @@ function disposeCharts() {
 
   .tag-card {
     grid-column: span 1;
+  }
+
+  /* 年度报告移动端适配 */
+  .annual-report-card {
+    padding: 20px;
+    border-radius: 16px;
+  }
+
+  .annual-report-card .card-title {
+    font-size: 20px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .stat-icon {
+    font-size: 24px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+  }
+
+  .secondary-stats {
+    gap: 16px;
+  }
+
+  .analysis-section {
+    grid-template-columns: 1fr;
+  }
+
+  .time-bar-container {
+    flex-wrap: wrap;
+  }
+
+  .time-label {
+    width: 100%;
+    font-size: 11px;
+  }
+
+  .time-bar-wrapper {
+    flex: 1;
+  }
+
+  .time-count {
+    width: auto;
   }
 }
 </style>

@@ -149,4 +149,27 @@ public interface QuoteRepository extends JpaRepository<Quote, Long> {
      */
     @Query("SELECT q FROM Quote q WHERE q.book.user = :user")
     List<Quote> findByUser(@Param("user") User user);
+
+    // ==================== 年度统计相关查询 ====================
+
+    /**
+     * 根据用户和年份统计金句数量
+     *
+     * @param user 用户实体
+     * @param year 年份
+     * @return Long 金句数量
+     */
+    @Query("SELECT COUNT(q) FROM Quote q WHERE q.book.user = :user AND YEAR(q.createdAt) = :year")
+    Long countByUserAndYear(@Param("user") User user, @Param("year") Integer year);
+
+    /**
+     * 根据用户和年份查询金句列表
+     * 用于年度统计关键词提取和阅读时间分析
+     *
+     * @param user 用户实体
+     * @param year 年份
+     * @return List<Quote> 金句列表
+     */
+    @Query("SELECT q FROM Quote q WHERE q.book.user = :user AND YEAR(q.createdAt) = :year")
+    List<Quote> findByUserAndYear(@Param("user") User user, @Param("year") Integer year);
 }

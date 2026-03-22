@@ -34,6 +34,14 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     Page<Book> findByUser(User user, Pageable pageable);
 
     /**
+     * 根据用户查询所有书籍
+     *
+     * @param user 用户实体
+     * @return List<Book> 书籍列表
+     */
+    List<Book> findByUser(User user);
+
+    /**
      * 根据用户和阅读状态查询书籍
      *
      * @param user 用户实体
@@ -164,4 +172,55 @@ public interface BookRepository extends JpaRepository<Book, Long> {
             @Param("status") Book.ReadingStatus status,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
+
+    // ==================== 年度统计相关查询 ====================
+
+    /**
+     * 根据用户和完成年份查询书籍
+     * 用于年度统计已完成书籍
+     *
+     * @param user 用户实体
+     * @param year 年份
+     * @return List<Book> 书籍列表
+     */
+    @Query("SELECT b FROM Book b WHERE b.user = :user AND b.readingStatus = 'COMPLETED' " +
+           "AND YEAR(b.finishDate) = :year")
+    List<Book> findCompletedBooksByUserAndYear(@Param("user") User user, @Param("year") Integer year);
+
+    /**
+     * 根据用户和创建年份查询书籍
+     * 用于年度统计新增书籍
+     *
+     * @param user 用户实体
+     * @param year 年份
+     * @return List<Book> 书籍列表
+     */
+    @Query("SELECT b FROM Book b WHERE b.user = :user AND YEAR(b.createdAt) = :year")
+    List<Book> findByUserAndYear(@Param("user") User user, @Param("year") Integer year);
+
+    /**
+     * 根据用户和完成年份查询评分最高的书籍
+     * 用于年度最佳书籍统计
+     *
+     * @param user 用户实体
+     * @param year 年份
+     * @return Optional<Book> 评分最高的书籍
+     */
+    @Query("SELECT b FROM Book b WHERE b.user = :user AND b.readingStatus = 'COMPLETED' " +
+           "AND YEAR(b.finishDate) = :year AND b.rating IS NOT NULL " +
+           "ORDER BY b.rating DESC, b.pageCount DESC LIMIT 1")
+    Optional<Book> findTopRatedBookByUserAndYear(@Param("user") User user, @Param("year") Integer year);
+
+    /**
+     * 根据用户和完成年份查询页数最多的书籍
+     * 用于年度最长书籍统计
+     *
+     * @param user 用户实体
+     * @param year 年份
+     * @return Optional<Book> 页数最多的书籍
+     */
+    @Query("SELECT b FROM Book b WHERE b.user = :user AND b.readingStatus = 'COMPLETED' " +
+           "AND YEAR(b.finishDate) = :year AND b.pageCount IS NOT NULL " +
+           "ORDER BY b.pageCount DESC LIMIT 1")
+    Optional<Book> findLongestBookByUserAndYear(@Param("user") User user, @Param("year") Integer year);
 }

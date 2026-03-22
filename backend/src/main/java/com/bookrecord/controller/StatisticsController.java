@@ -1,7 +1,9 @@
 package com.bookrecord.controller;
 
+import com.bookrecord.dto.AnnualStatistics;
 import com.bookrecord.dto.ApiResponse;
 import com.bookrecord.dto.CategoryStatistics;
+import com.bookrecord.dto.EfficiencyStatistics;
 import com.bookrecord.dto.TrendStatistics;
 import com.bookrecord.service.StatisticsService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -74,6 +76,39 @@ public class StatisticsController {
     }
 
     /**
+     * 获取年度阅读报告统计数据
+     * 返回指定年份的阅读成果和习惯分析，包括完成书籍数、阅读时长、关键词等
+     *
+     * @param userDetails 当前登录用户信息
+     * @param year 统计年份，默认为当前年份
+     * @return ResponseEntity 包含年度统计数据
+     */
+    @GetMapping("/annual")
+    @Operation(summary = "获取年度阅读报告", description = "统计年度完成书籍、阅读时长、关键词、阅读习惯等")
+    public ResponseEntity<ApiResponse<AnnualStatistics>> getAnnualStatistics(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Parameter(description = "统计年份，不传则默认为当前年份")
+            @RequestParam(required = false) Integer year) {
+
+        // 如果未指定年份，使用当前年份
+        if (year == null) {
+            year = java.time.LocalDate.now().getYear();
+        }
+
+        // 验证年份范围（不能早于2000年，不能晚于明年）
+        int currentYear = java.time.LocalDate.now().getYear();
+        if (year < 2000 || year > currentYear + 1) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("年份参数无效，有效范围：2000-" + (currentYear + 1)));
+        }
+
+        AnnualStatistics statistics = statisticsService.getAnnualStatistics(
+                userDetails.getUsername(), year);
+
+        return ResponseEntity.ok(ApiResponse.success(statistics));
+    }
+
+    /**
      * 验证时间范围参数是否有效
      *
      * @param range 时间范围参数
@@ -83,5 +118,23 @@ public class StatisticsController {
         return "6m".equalsIgnoreCase(range) ||
                "1y".equalsIgnoreCase(range) ||
                "all".equalsIgnoreCase(range);
+    }
+
+    /**
+     * 获取阅读效率分析数据
+     * 返回阅读速度、完成天数、记录频率等效率指标
+     *
+     * @param userDetails 当前登录用户信息
+     * @return ResponseEntity 包含效率统计数据
+     */
+    @GetMapping("/efficiency")
+    @Operation(summary = "获取阅读效率分析", description = "分析阅读速度、完成天数、记录频率等效率指标，并提供阅读建议")
+    public ResponseEntity<ApiResponse<EfficiencyStatistics>> getEfficiencyStatistics(
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        EfficiencyStatistics statistics = statisticsService.getEfficiencyStatistics(
+                userDetails.getUsername());
+
+        return ResponseEntity.ok(ApiResponse.success(statistics));
     }
 }
