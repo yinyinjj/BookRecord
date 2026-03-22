@@ -33,6 +33,15 @@ public interface ReadingNoteRepository extends JpaRepository<ReadingNote, Long> 
     Page<ReadingNote> findByBookId(Long bookId, Pageable pageable);
 
     /**
+     * 根据书籍ID查询所有感悟（按创建时间倒序）
+     * 用于导出功能
+     *
+     * @param bookId 书籍ID
+     * @return List<ReadingNote> 感悟列表
+     */
+    List<ReadingNote> findByBookIdOrderByCreatedAtDesc(Long bookId);
+
+    /**
      * 根据金句ID查询关联感悟
      *
      * @param quoteId 金句ID

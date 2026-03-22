@@ -159,6 +159,104 @@
             </div>
           </div>
         </div>
+
+        <!-- 分享海报区域 -->
+        <div class="share-section" v-if="!annualLoading && hasAnnualData">
+          <div class="share-actions">
+            <button class="share-btn" @click="generatePoster" :disabled="posterGenerating">
+              <span class="btn-icon">📷</span>
+              <span>{{ posterGenerating ? '生成中...' : '生成分享海报' }}</span>
+            </button>
+            <button class="share-btn outline" @click="shareReport" :disabled="!canShare">
+              <span class="btn-icon">🔗</span>
+              <span>一键分享</span>
+            </button>
+          </div>
+          <p class="share-hint">生成年度阅读报告海报，分享您的阅读成果</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 海报模板（隐藏） ==================== -->
+    <div class="poster-container" :class="{ visible: showPoster }" ref="posterContainerRef">
+      <div class="poster-overlay" @click="closePoster"></div>
+      <div class="poster-modal">
+        <div class="poster-header">
+          <h3>年度阅读报告</h3>
+          <button class="close-btn" @click="closePoster">✕</button>
+        </div>
+        <div class="poster-content" ref="posterRef">
+          <!-- 海报头部 -->
+          <div class="poster-top">
+            <div class="poster-year">{{ currentYear }}</div>
+            <div class="poster-title">年度阅读报告</div>
+            <div class="poster-subtitle">记录阅读足迹，见证成长轨迹</div>
+          </div>
+          <!-- 海报核心数据 -->
+          <div class="poster-stats">
+            <div class="poster-stat-item">
+              <div class="poster-stat-icon">📚</div>
+              <div class="poster-stat-value">{{ annualData.completedBooksCount || 0 }}</div>
+              <div class="poster-stat-label">完成书籍</div>
+            </div>
+            <div class="poster-stat-item">
+              <div class="poster-stat-icon">📖</div>
+              <div class="poster-stat-value">{{ annualData.newBooksCount || 0 }}</div>
+              <div class="poster-stat-label">新增书籍</div>
+            </div>
+            <div class="poster-stat-item">
+              <div class="poster-stat-icon">⏱️</div>
+              <div class="poster-stat-value">{{ annualData.estimatedReadingHours || 0 }}</div>
+              <div class="poster-stat-label">阅读时长(小时)</div>
+            </div>
+            <div class="poster-stat-item">
+              <div class="poster-stat-icon">📄</div>
+              <div class="poster-stat-value">{{ formatNumber(annualData.totalPagesRead) }}</div>
+              <div class="poster-stat-label">阅读页数</div>
+            </div>
+          </div>
+          <!-- 海报次级数据 -->
+          <div class="poster-secondary">
+            <div class="poster-secondary-item">
+              <span class="ps-icon">✏️</span>
+              <span class="ps-value">{{ annualData.notesCount || 0 }}</span>
+              <span class="ps-label">条感悟</span>
+            </div>
+            <div class="poster-secondary-item">
+              <span class="ps-icon">💬</span>
+              <span class="ps-value">{{ annualData.quotesCount || 0 }}</span>
+              <span class="ps-label">条金句</span>
+            </div>
+          </div>
+          <!-- 海报关键词 -->
+          <div class="poster-keywords" v-if="annualData.topKeywords?.length > 0">
+            <div class="poster-keywords-title">年度关键词</div>
+            <div class="poster-keywords-list">
+              <span
+                v-for="(keyword, index) in annualData.topKeywords?.slice(0, 6)"
+                :key="keyword.word"
+                class="poster-keyword"
+                :style="getPosterKeywordStyle(keyword.count, index)"
+              >
+                {{ keyword.word }}
+              </span>
+            </div>
+          </div>
+          <!-- 海报底部 -->
+          <div class="poster-footer">
+            <div class="poster-brand">Book Record · 读书笔记管理系统</div>
+          </div>
+        </div>
+        <div class="poster-actions">
+          <button class="poster-action-btn" @click="downloadPoster" :disabled="downloading">
+            <span class="btn-icon">💾</span>
+            <span>{{ downloading ? '保存中...' : '保存图片' }}</span>
+          </button>
+          <button class="poster-action-btn primary" @click="sharePoster" :disabled="!canShare">
+            <span class="btn-icon">📤</span>
+            <span>分享</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -340,6 +438,8 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import * as echarts from 'echarts'
+import html2canvas from 'html2canvas'
+import { ElMessage } from 'element-plus'
 import api from '@/api/index'
 
 // ==================== 路由实例 ====================
@@ -396,6 +496,14 @@ const efficiencyData = ref({})
 
 /** 效率分析加载状态 */
 const efficiencyLoading = ref(false)
+
+/** 海报相关状态 */
+const showPoster = ref(false)
+const posterGenerating = ref(false)
+const downloading = ref(false)
+const posterRef = ref(null)
+const posterContainerRef = ref(null)
+const posterImageUrl = ref('')
 
 /** 时间范围选项配置 */
 const timeRanges = [
@@ -457,6 +565,27 @@ const totalNewBooks = computed(() => {
 const totalCompletedBooks = computed(() => {
   if (!trendData.value) return 0
   return trendData.value.reduce((sum, item) => sum + (item.completedBooks || 0), 0)
+})
+
+/**
+ * 判断年度报告是否有数据
+ */
+const hasAnnualData = computed(() => {
+  const data = annualData.value
+  return data && (
+    data.completedBooksCount > 0 ||
+    data.newBooksCount > 0 ||
+    data.notesCount > 0 ||
+    data.quotesCount > 0
+  )
+})
+
+/**
+ * 判断是否支持分享功能
+ * Web Share API 需要在安全上下文（HTTPS）中使用
+ */
+const canShare = computed(() => {
+  return typeof navigator !== 'undefined' && typeof navigator.share === 'function'
 })
 
 // ==================== 生命周期钩子 ====================
@@ -889,6 +1018,184 @@ function disposeCharts() {
   trendChartInstance = null
   statusChartInstance = null
   noteTypeChartInstance = null
+}
+
+// ==================== 海报相关方法 ====================
+
+/**
+ * 计算海报关键词样式
+ *
+ * @param {number} count - 关键词出现次数
+ * @param {number} index - 关键词索引
+ * @returns {Object} CSS 样式对象
+ */
+function getPosterKeywordStyle(count, index) {
+  const keywords = annualData.value.topKeywords || []
+  const maxCount = keywords[0]?.count || 1
+  const minSize = 14
+  const maxSize = 24
+  const size = minSize + (count / maxCount) * (maxSize - minSize)
+
+  const colors = [
+    '#4a9c7b', '#d4a84b', '#5b8ff9', '#e690d1',
+    '#73c0de', '#3ba272'
+  ]
+  const color = colors[index % colors.length]
+
+  return {
+    fontSize: `${size}px`,
+    color: color
+  }
+}
+
+/**
+ * 生成海报
+ * 显示海报模态框
+ */
+async function generatePoster() {
+  if (!hasAnnualData.value) {
+    ElMessage.warning('暂无年度数据，无法生成报告')
+    return
+  }
+
+  posterGenerating.value = true
+  try {
+    // 显示海报模态框
+    showPoster.value = true
+    await nextTick()
+
+    // 等待 DOM 渲染完成
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    // 生成海报图片
+    if (posterRef.value) {
+      const canvas = await html2canvas(posterRef.value, {
+        backgroundColor: '#1a2a3a',
+        scale: 2,
+        useCORS: true,
+        logging: false
+      })
+      posterImageUrl.value = canvas.toDataURL('image/png')
+    }
+  } catch (error) {
+    console.error('生成海报失败:', error)
+    ElMessage.error('生成海报失败，请重试')
+  } finally {
+    posterGenerating.value = false
+  }
+}
+
+/**
+ * 一键分享年度报告
+ * 使用 Web Share API 直接分享文本信息
+ */
+async function shareReport() {
+  const shareData = {
+    title: `${currentYear.value}年度阅读报告`,
+    text: `我在 ${currentYear.value} 年完成了 ${annualData.value.completedBooksCount || 0} 本书的阅读，阅读时长约 ${annualData.value.estimatedReadingHours || 0} 小时。使用 Book Record 记录你的阅读足迹！`,
+    url: window.location.origin
+  }
+
+  try {
+    await navigator.share(shareData)
+    ElMessage.success('分享成功')
+  } catch (error) {
+    if (error.name !== 'AbortError') {
+      console.error('分享失败:', error)
+      ElMessage.error('分享失败，请重试')
+    }
+  }
+}
+
+/**
+ * 关闭海报模态框
+ */
+function closePoster() {
+  showPoster.value = false
+  posterImageUrl.value = ''
+}
+
+/**
+ * 下载海报图片
+ */
+async function downloadPoster() {
+  if (!posterRef.value) {
+    ElMessage.warning('请先生成海报')
+    return
+  }
+
+  downloading.value = true
+  try {
+    // 重新生成高质量图片用于下载
+    const canvas = await html2canvas(posterRef.value, {
+      backgroundColor: '#1a2a3a',
+      scale: 3,
+      useCORS: true,
+      logging: false
+    })
+
+    // 创建下载链接
+    const link = document.createElement('a')
+    link.href = canvas.toDataURL('image/png')
+    link.download = `${currentYear.value}年度阅读报告.png`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    ElMessage.success('海报已保存')
+  } catch (error) {
+    console.error('下载海报失败:', error)
+    ElMessage.error('保存失败，请重试')
+  } finally {
+    downloading.value = false
+  }
+}
+
+/**
+ * 分享海报图片
+ */
+async function sharePoster() {
+  if (!posterRef.value) {
+    ElMessage.warning('请先生成海报')
+    return
+  }
+
+  try {
+    // 生成图片
+    const canvas = await html2canvas(posterRef.value, {
+      backgroundColor: '#1a2a3a',
+      scale: 2,
+      useCORS: true,
+      logging: false
+    })
+
+    // 转换为 Blob
+    const blob = await new Promise(resolve => {
+      canvas.toBlob(resolve, 'image/png')
+    })
+
+    // 创建 File 对象
+    const file = new File([blob], `${currentYear.value}年度阅读报告.png`, {
+      type: 'image/png'
+    })
+
+    // 使用 Web Share API 分享文件
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        title: `${currentYear.value}年度阅读报告`,
+        text: `我在 ${currentYear.value} 年完成了 ${annualData.value.completedBooksCount || 0} 本书的阅读！`,
+        files: [file]
+      })
+      ElMessage.success('分享成功')
+    } else {
+      ElMessage.warning('当前浏览器不支持分享图片，请使用保存功能')
+    }
+  } catch (error) {
+    if (error.name !== 'AbortError') {
+      console.error('分享海报失败:', error)
+      ElMessage.error('分享失败，请重试')
+    }
+  }
 }
 </script>
 
@@ -1630,6 +1937,323 @@ function disposeCharts() {
   transform: scale(1.05);
 }
 
+/* ==================== 分享海报区域 ==================== */
+.share-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.share-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.share-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  background: linear-gradient(135deg, #4a9c7b 0%, #5fb892 100%);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.share-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(74, 156, 123, 0.4);
+}
+
+.share-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.share-btn.outline {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.share-btn.outline:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.share-btn .btn-icon {
+  font-size: 18px;
+}
+
+.share-hint {
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0;
+}
+
+/* ==================== 海报模态框 ==================== */
+.poster-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.poster-container.visible {
+  display: flex;
+}
+
+.poster-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+}
+
+.poster-modal {
+  position: relative;
+  background: #fff;
+  border-radius: 16px;
+  max-width: 420px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.poster-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.poster-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.close-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f7fa;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  color: #606266;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: #e4e7ed;
+  color: #303133;
+}
+
+/* ==================== 海报内容样式 ==================== */
+.poster-content {
+  padding: 32px 24px;
+  background: linear-gradient(135deg, #1a2a3a 0%, #2d4a5e 100%);
+  color: #fff;
+}
+
+.poster-top {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.poster-year {
+  font-size: 48px;
+  font-weight: 700;
+  color: #d4a84b;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.poster-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.poster-subtitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.poster-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.poster-stat-item {
+  text-align: center;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+}
+
+.poster-stat-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+
+.poster-stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.poster-stat-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 4px;
+}
+
+.poster-secondary {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  padding: 16px 0;
+  margin-bottom: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.poster-secondary-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ps-icon {
+  font-size: 16px;
+}
+
+.ps-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.ps-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.poster-keywords {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.poster-keywords-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 12px;
+}
+
+.poster-keywords-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.poster-keyword {
+  display: inline-block;
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  font-weight: 500;
+}
+
+.poster-footer {
+  text-align: center;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.poster-brand {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* ==================== 海报操作按钮 ==================== */
+.poster-actions {
+  display: flex;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #fafbfc;
+  border-top: 1px solid #f0f0f0;
+}
+
+.poster-action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #606266;
+  background: #fff;
+  border: 1px solid #dcdfe6;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.poster-action-btn:hover:not(:disabled) {
+  border-color: #4a9c7b;
+  color: #4a9c7b;
+}
+
+.poster-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.poster-action-btn.primary {
+  color: #fff;
+  background: linear-gradient(135deg, #4a9c7b 0%, #5fb892 100%);
+  border-color: #4a9c7b;
+}
+
+.poster-action-btn.primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(74, 156, 123, 0.3);
+}
+
+.poster-action-btn .btn-icon {
+  font-size: 16px;
+}
+
 /* ==================== 响应式适配 ==================== */
 @media (max-width: 900px) {
   .category-cards {
@@ -1757,6 +2381,53 @@ function disposeCharts() {
 
   .time-count {
     width: auto;
+  }
+
+  /* 分享按钮移动端适配 */
+  .share-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .share-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* 海报模态框移动端适配 */
+  .poster-modal {
+    width: 95%;
+    max-height: 85vh;
+  }
+
+  .poster-content {
+    padding: 24px 16px;
+  }
+
+  .poster-year {
+    font-size: 36px;
+  }
+
+  .poster-title {
+    font-size: 20px;
+  }
+
+  .poster-stats {
+    gap: 8px;
+  }
+
+  .poster-stat-item {
+    padding: 12px;
+  }
+
+  .poster-stat-value {
+    font-size: 24px;
+  }
+
+  .poster-actions {
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px;
   }
 }
 </style>

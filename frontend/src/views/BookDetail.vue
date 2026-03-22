@@ -52,7 +52,20 @@
         <el-tab-pane label="读书感悟" name="notes">
           <div class="section-header">
             <h3>读书感悟</h3>
-            <el-button type="primary" @click="showAddNoteDialog">添加感悟</el-button>
+            <div class="section-actions">
+              <el-dropdown @command="handleExportNotes" class="export-dropdown">
+                <el-button>
+                  导出 <el-icon class="el-icon--right"><arrow-down /></el-icon>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="markdown">导出为 Markdown</el-dropdown-item>
+                    <el-dropdown-item command="pdf">导出为 PDF</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+              <el-button type="primary" @click="showAddNoteDialog">添加感悟</el-button>
+            </div>
           </div>
           <div v-if="notes.length === 0" class="empty-text">暂无感悟</div>
           <div v-else class="note-list">
@@ -78,7 +91,20 @@
         <el-tab-pane label="金句收藏" name="quotes">
           <div class="section-header">
             <h3>金句收藏</h3>
-            <el-button type="primary" @click="showAddQuoteDialog">添加金句</el-button>
+            <div class="section-actions">
+              <el-dropdown @command="handleExportQuotes" class="export-dropdown">
+                <el-button>
+                  导出 <el-icon class="el-icon--right"><arrow-down /></el-icon>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="markdown">导出为 Markdown</el-dropdown-item>
+                    <el-dropdown-item command="pdf">导出为 PDF</el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+              <el-button type="primary" @click="showAddQuoteDialog">添加金句</el-button>
+            </div>
           </div>
           <div v-if="quotes.length === 0" class="empty-text">暂无金句</div>
           <div v-else class="quote-list">
@@ -257,6 +283,7 @@ import { ref, reactive, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { bookApi, readingNoteApi, quoteApi } from '@/api/modules'
 import { ElMessage } from 'element-plus'
+import { ArrowDown } from '@element-plus/icons-vue'
 // 导入块级富文本编辑器组件
 import BlockEditor from '@/components/BlockEditor.vue'
 // 导入图片代理工具
@@ -700,6 +727,68 @@ function getNoteTypeText(type) {
   }
   return texts[type] || type
 }
+
+// ==================== 导出功能方法 ====================
+
+/**
+ * 处理导出感悟
+ * 支持导出为 Markdown 或 PDF 格式
+ * @param {string} format - 导出格式（markdown 或 pdf）
+ */
+function handleExportNotes(format) {
+  const url = `/api/v1/books/${bookId}/notes/export?format=${format}`
+  downloadFile(url, `notes_${bookId}.${format === 'pdf' ? 'pdf' : 'md'}`)
+}
+
+/**
+ * 处理导出金句
+ * 支持导出为 Markdown 或 PDF 格式
+ * @param {string} format - 导出格式（markdown 或 pdf）
+ */
+function handleExportQuotes(format) {
+  const url = `/api/v1/books/${bookId}/quotes/export?format=${format}`
+  downloadFile(url, `quotes_${bookId}.${format === 'pdf' ? 'pdf' : 'md'}`)
+}
+
+/**
+ * 下载文件
+ * 创建隐藏的下载链接并触发点击
+ * @param {string} url - 下载地址
+ * @param {string} filename - 文件名
+ */
+function downloadFile(url, filename) {
+  // 获取 token
+  const token = localStorage.getItem('token')
+
+  // 创建 fetch 请求
+  fetch(url, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('导出失败')
+      }
+      return response.blob()
+    })
+    .then(blob => {
+      // 创建下载链接
+      const downloadUrl = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = downloadUrl
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(downloadUrl)
+      ElMessage.success('导出成功')
+    })
+    .catch(error => {
+      console.error('导出失败:', error)
+      ElMessage.error('导出失败，请重试')
+    })
+}
 </script>
 
 <style scoped>
@@ -775,6 +864,16 @@ function getNoteTypeText(type) {
 
 .section-header h3 {
   margin: 0;
+}
+
+.section-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.export-dropdown {
+  margin-right: 0;
 }
 
 .empty-text {
